@@ -6,15 +6,10 @@
 #include "OpticAttachment.generated.h"
 
 UCLASS(Abstract)
-class FIREARMSYSTEM_API AOpticAttachment : public AFirearmAttachment {
+class FIREARMSYSTEM_API AOpticsAttachment : public AFirearmAttachment {
 	GENERATED_BODY()
 public:
-	AOpticAttachment();
-	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Attachment")
-		UStaticMeshComponent* Mesh;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Attachment")
-		USceneComponent* AttachmentPoint;
+	AOpticsAttachment();
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Attachment", meta=(UIMin=0.f))
 		float ZoomFactor = 2.f;

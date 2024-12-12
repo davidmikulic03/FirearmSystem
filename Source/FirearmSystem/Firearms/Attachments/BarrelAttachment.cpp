@@ -1,10 +1,8 @@
 ﻿#include "BarrelAttachment.h"
 
 ABarrelAttachment::ABarrelAttachment() {
-	Mesh = CreateDefaultSubobject<UStaticMeshComponent>("Mesh");
-	RootComponent = Mesh;
-	AttachmentPoint = CreateDefaultSubobject<USceneComponent>("AttachmentPoint");
-	AttachmentPoint->SetupAttachment(Mesh);
+	FiringPoint = CreateDefaultSubobject<USceneComponent>("Firing Point");
+	FiringPoint->SetupAttachment(RootComponent);
 
 	PrimaryActorTick.bCanEverTick = false;
 }

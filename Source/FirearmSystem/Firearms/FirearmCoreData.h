@@ -23,9 +23,13 @@ public:
 		TEnumAsByte<EFiringType> FiringType = Manual;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(EditCondition="FiringType!=EFiringType::Manual", EditConditionHides))
 		bool bNeedsInitialCocking = false;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(Units="m/s"))
 		float BulletSpeed = INFINITY;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(UIMin=0.f,UIMax=1.f))
 		float Accuracy = 1.f;
-
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(UIMin=0.f))
+		float FireFrequency = 2.f;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(Units="kg", UIMin=0.f))
+		float Weight = 2.f;
 };

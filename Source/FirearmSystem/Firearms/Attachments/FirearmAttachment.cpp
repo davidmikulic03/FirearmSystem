@@ -5,9 +5,13 @@
 
 
 // Sets default values
-AFirearmAttachment::AFirearmAttachment()
-{
-	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+AFirearmAttachment::AFirearmAttachment() {
+
+	AttachmentPoint = CreateDefaultSubobject<USceneComponent>("Attachment Point");
+	RootComponent = AttachmentPoint;
+	Mesh = CreateDefaultSubobject<UStaticMeshComponent>("Mesh");
+	Mesh->SetupAttachment(AttachmentPoint);
+	
 	PrimaryActorTick.bCanEverTick = false;
 }
 
