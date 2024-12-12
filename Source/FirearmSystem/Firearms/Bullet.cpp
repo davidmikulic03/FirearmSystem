@@ -15,6 +15,7 @@ ABullet::ABullet() {
 	RootComponent = Collision;
 	Mesh = CreateDefaultSubobject<UStaticMeshComponent>("Mesh");
 	Mesh->SetupAttachment(Collision);
+	Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	
 	PrimaryActorTick.bCanEverTick = true;
 }
@@ -24,20 +25,26 @@ void ABullet::Fire(AFirearmBase* ShotFrom, FVector InVelocity) {
 	Velocity = 100 * InVelocity;
 }
 
-void ABullet::Tick(float DeltaTime) {
-	FVector NewLocation = GetActorLocation() + Velocity * DeltaTime;
+void ABullet::Move(float DeltaSeconds)
+{
+	FVector Acceleration = FVector::UpVector * GetWorld()->GetGravityZ();
+	FVector NewLocation = GetActorLocation() + Velocity * DeltaSeconds + 0.5 * Acceleration * DeltaSeconds * DeltaSeconds;
 	FHitResult Hit;
 	TArray<AActor*> Ignore;
-	Ignore.Init(GetOwner(),1);
+	if(GetOwner()) {
+		GetOwner()->GetAttachedActors(Ignore);
+		Ignore.Add(GetOwner());
+		Ignore.Add(this);
+	}
 	bool bHit = UKismetSystemLibrary::SphereTraceSingle(
 		GetWorld(),
 		GetActorLocation(),
 		NewLocation,
 		Collision->GetUnscaledSphereRadius(),
 		UEngineTypes::ConvertToTraceType(ECC_GameTraceChannel1),
-		false, Ignore, EDrawDebugTrace::ForDuration, Hit,
+		false, Ignore, EDrawDebugTrace::ForOneFrame, Hit,
 		true, FLinearColor::Green, FLinearColor::Red,
-		0.2f);
+		0.1f);
 	if(bHit) {
 		SetActorLocation(Hit.ImpactPoint);
 		Velocity = FVector::ZeroVector;
@@ -48,6 +55,14 @@ void ABullet::Tick(float DeltaTime) {
 	else
 		SetActorLocation(NewLocation);
 	
-	Velocity += FVector::UpVector * GetWorld()->GetGravityZ();
+	Velocity += Acceleration * DeltaSeconds;
+
+	if(LifetimeCounter < MaxLifetime)
+		LifetimeCounter+=DeltaSeconds;
+	else Destroy();
+}
+
+void ABullet::Tick(float DeltaSeconds) {
+	Move(DeltaSeconds);
 }
 

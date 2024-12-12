@@ -1,8 +1,12 @@
 ﻿#include "BarrelAttachment.h"
 
 ABarrelAttachment::ABarrelAttachment() {
-	FiringPoint = CreateDefaultSubobject<USceneComponent>("Firing Point");
-	FiringPoint->SetupAttachment(RootComponent);
+	BarrelExitPoint = CreateDefaultSubobject<USceneComponent>("Firing Point");
+	BarrelExitPoint->SetupAttachment(RootComponent);
 
 	PrimaryActorTick.bCanEverTick = false;
+}
+
+FVector ABarrelAttachment::GetBarrelExitLocation() {
+	return BarrelExitPoint->GetComponentLocation();
 }

@@ -10,8 +10,8 @@ AFirearmBase::AFirearmBase() {
 	Root = CreateDefaultSubobject<UStaticMeshComponent>("Firearm");
 	RootComponent = Root;
 
-	BarrelAttachmentPoint = CreateDefaultSubobject<USceneComponent>("Barrel Attachment Point");
-	BarrelAttachmentPoint->SetupAttachment(Root);
+	BarrelExitPoint = CreateDefaultSubobject<USceneComponent>("Barrel Attachment Point");
+	BarrelExitPoint->SetupAttachment(Root);
 	StockAttachmentPoint = CreateDefaultSubobject<USceneComponent>("Stock Attachment Point");
 	StockAttachmentPoint->SetupAttachment(Root);
 	OpticsAttachmentPoint = CreateDefaultSubobject<USceneComponent>("Optics Attachment Point");
@@ -43,6 +43,13 @@ void AFirearmBase::RegisterHit(TWeakObjectPtr<UPrimitiveComponent> Component) {
 			FString::Printf(TEXT("Hit actor %s"),
 				*Component.Get()->GetOwner()->GetName()));
 	}
+}
+
+FVector AFirearmBase::GetBarrelExitLocation() {
+	if(!BarrelAttachment)
+		return BarrelExitPoint->GetComponentLocation();
+	else 
+		return BarrelAttachment->GetBarrelExitLocation();
 }
 
 void AFirearmBase::AttachBarrel(ABarrelAttachment* InBarrel, ABarrelAttachment*& OutBarrel) {
@@ -79,8 +86,8 @@ bool AFirearmBase::TryAttach(AActor* InActor) {
 	if (InActor) {
 		InActor->AttachToActor(this, FAttachmentTransformRules::KeepRelativeTransform);
 		if(InActor->IsA(ABarrelAttachment::StaticClass())) {
-			InActor->SetActorLocation(BarrelAttachmentPoint->GetComponentLocation());
-			InActor->SetActorRotation(BarrelAttachmentPoint->GetComponentRotation());
+			InActor->SetActorLocation(BarrelExitPoint->GetComponentLocation());
+			InActor->SetActorRotation(BarrelExitPoint->GetComponentRotation());
 		}
 		else if(InActor->IsA(AStockAttachment::StaticClass())) {
 			InActor->SetActorLocation(StockAttachmentPoint->GetComponentLocation());

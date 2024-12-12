@@ -23,7 +23,7 @@ public:
 		int CurrentAmmunition = 0;
 
 	UFUNCTION(BlueprintCallable)
-	FORCEINLINE bool IsEmpty() const { return Capacity < 1; }
+	FORCEINLINE bool IsEmpty() const { return CurrentAmmunition<1; }
 	
 	virtual bool TryUse(class AFirearmBase* Originator) override;
 	

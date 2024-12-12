@@ -18,6 +18,8 @@ public:
 	virtual void Tick(float DeltaSeconds) override;
 
 	void RegisterHit(TWeakObjectPtr<UPrimitiveComponent> Component);
+
+	FVector GetBarrelExitLocation();
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 		UStaticMeshComponent* Root;
@@ -28,7 +30,7 @@ public:
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly)
 		class ABarrelAttachment* BarrelAttachment;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-		USceneComponent* BarrelAttachmentPoint;
+		USceneComponent* BarrelExitPoint;
 	
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly)
 		class AStockAttachment* StockAttachment;

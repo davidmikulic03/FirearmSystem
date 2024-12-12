@@ -11,10 +11,12 @@ class FIREARMSYSTEM_API ABarrelAttachment : public AFirearmAttachment {
 public:
 	ABarrelAttachment();
 
+	FVector GetBarrelExitLocation();
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		USceneComponent* FiringPoint;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Attachment", meta=(UIMin=0.f, UIMax=1.f))
-		float AccuracyModifier = 0.f;
+		USceneComponent* BarrelExitPoint;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Attachment", meta=(UIMin=0.f))
+		float AccuracyModifier = 1.f;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Attachment", meta=(UIMin=0.f))
 		float SpeedModifier = 1.f;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Attachment", meta=(UIMin=0.f))
