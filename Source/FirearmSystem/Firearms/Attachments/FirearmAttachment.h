@@ -14,6 +14,8 @@ class FIREARMSYSTEM_API AFirearmAttachment : public AActor
 public:
 	AFirearmAttachment();
 
+	virtual float GetWeight() { return Weight; }
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Attachment")
 		UStaticMeshComponent* Mesh;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Attachment")

@@ -3,6 +3,7 @@
 
 #include "Bullet.h"
 #include "FirearmCoreData.h"
+#include "ParticleHelper.h"
 #include "Attachments/BarrelAttachment.h"
 #include "Attachments/Magazine.h"
 #include "Attachments/UnderBarrelAttachment.h"
@@ -14,38 +15,26 @@ AMagazineFirearm::AMagazineFirearm() {
 }
 
 bool AMagazineFirearm::TryFire() {
-	if(!Magazine)
-		return false;
-	if(CanFire() && BarrelAttachment && Magazine->BulletClass && Magazine->TryUse(this)) {
-		const FVector Location = BarrelAttachment->BarrelExitPoint->GetComponentLocation();
-		const FRotator Rotation = GetActorRotation();
-		FActorSpawnParameters SpawnParameters = FActorSpawnParameters();
-		SpawnParameters.bNoFail = true;
-		SpawnParameters.Owner = this;
-		if(auto Bullet = GetWorld()->SpawnActor<ABullet>(Magazine->BulletClass,
-			Location, Rotation, SpawnParameters))
-		{
-			float AverageErrorAngleInRadians = BarrelAttachment->AccuracyModifier * FMath::DegreesToRadians(FirearmData->Accuracy / 60);
-			FVector Direction = GetActorForwardVector();
-			FQuat RandomRotation = FQuat::MakeFromRotationVector(AverageErrorAngleInRadians * UKismetMathLibrary::RandomUnitVector());
-			Direction = RandomRotation * Direction;
-			Bullet->Fire(this, FirearmData->BulletSpeed * Direction);
-			FireCounter = 1.f/FirearmData->FireFrequency;
-			return true;
-		}
+	bool bResult = Super::TryFire();
+	
+	if (FirearmData->FiringType!=Manual && Magazine) {
+		if (BulletsInChamber < FirearmData->ChamberCapacity && Magazine->TryUse(this))
+			BulletsInChamber++;
+		else if(Magazine->IsEmpty())
+			ReplaceMagazine();
 	}
-	else if(Magazine->IsEmpty())
-		AddMagazine();
-	return false;
+	else if (!Magazine)
+		ReplaceMagazine();
+	
+	return bResult;
 }
 
 void AMagazineFirearm::BeginPlay() {
 	Super::BeginPlay();
-	AddMagazine();
 }
 
-void AMagazineFirearm::AddMagazine() {
-	if(MagazineClass) {
+void AMagazineFirearm::ReplaceMagazine() {
+	if(MagazineClass && Cast<AMagazine>(MagazineClass->ClassDefaultObject)->BulletClass == FirearmData->BulletClass) {
 		if(Magazine) {
 			Magazine->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
 			Magazine->Mesh->SetSimulatePhysics(true);
@@ -53,6 +42,14 @@ void AMagazineFirearm::AddMagazine() {
 		Magazine = GetWorld()->SpawnActor<AMagazine>(MagazineClass);
 		TryAttach(Magazine);
 	}	
+}
+
+float AMagazineFirearm::GetWeight()
+{
+	float Result = Super::GetWeight();
+	if (Magazine)
+		Result += Magazine->GetWeight();
+	return Result;
 }
 
 void AMagazineFirearm::Tick(float DeltaTime)

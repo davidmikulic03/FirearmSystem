@@ -29,6 +29,11 @@ public:
 		float Accuracy = 1.f;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(UIMin=0.f))
 		float FireFrequency = 2.f;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(UIMin=1))
+		int ChamberCapacity = 1;
+
+	UPROPERTY(EditDefaultsOnly)
+		TSubclassOf<class ABullet> BulletClass;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(Units="kg", UIMin=0.f))
 		float Weight = 2.f;

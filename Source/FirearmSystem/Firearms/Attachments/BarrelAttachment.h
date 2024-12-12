@@ -12,6 +12,12 @@ public:
 	ABarrelAttachment();
 
 	FVector GetBarrelExitLocation();
+	float GetAccuracyModifier() {
+		float Result = AccuracyModifier;
+		if (bCanAttachFurther && BarrelAttachment)
+			Result *= BarrelAttachment->GetAccuracyModifier();
+		return Result;
+	}
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		USceneComponent* BarrelExitPoint;
@@ -23,4 +29,8 @@ public:
 		float VolumeMultiplier = 1.f;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Attachment", meta=(UIMin=0.f))
 		float FlashMultiplier = 1.f;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Attachment", meta=(EditCondition="bCanAttachFurther", EditConditionHides))
+		ABarrelAttachment* BarrelAttachment = nullptr;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		bool bCanAttachFurther = false;
 };

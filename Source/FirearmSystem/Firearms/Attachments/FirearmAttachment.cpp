@@ -7,10 +7,10 @@
 // Sets default values
 AFirearmAttachment::AFirearmAttachment() {
 
-	AttachmentPoint = CreateDefaultSubobject<USceneComponent>("Attachment Point");
-	RootComponent = AttachmentPoint;
 	Mesh = CreateDefaultSubobject<UStaticMeshComponent>("Mesh");
-	Mesh->SetupAttachment(AttachmentPoint);
+	RootComponent = Mesh;
+	AttachmentPoint = CreateDefaultSubobject<USceneComponent>("Attachment Point");
+	AttachmentPoint->SetupAttachment(Mesh);
 	
 	PrimaryActorTick.bCanEverTick = false;
 }

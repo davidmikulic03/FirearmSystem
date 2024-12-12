@@ -21,13 +21,15 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 		USceneComponent* MagazineAttachmentPoint;
 
-	UPROPERTY(EditInstanceOnly)
+	UPROPERTY(EditAnywhere)
 	TSubclassOf<AMagazine> MagazineClass;
 
 protected:
 	virtual void BeginPlay() override;
 
-	void AddMagazine();
+	void ReplaceMagazine();
+
+	virtual float GetWeight() override;
 
 public:
 	virtual void Tick(float DeltaTime) override;

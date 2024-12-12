@@ -1,10 +1,12 @@
 ﻿#include "FirearmBase.h"
 
+#include "Bullet.h"
 #include "FirearmCoreData.h"
 #include "Attachments/BarrelAttachment.h"
 #include "Attachments/OpticAttachment.h"
 #include "Attachments/StockAttachment.h"
 #include "Attachments/UnderBarrelAttachment.h"
+#include "Kismet/KismetMathLibrary.h"
 
 AFirearmBase::AFirearmBase() {
 	Root = CreateDefaultSubobject<UStaticMeshComponent>("Firearm");
@@ -23,6 +25,32 @@ AFirearmBase::AFirearmBase() {
 }
 
 bool AFirearmBase::TryFire() {
+	if(CanFire() && BulletsInChamber > 0) {
+		const FVector Location = GetBarrelExitLocation();
+		const FRotator Rotation = GetActorRotation();
+		FActorSpawnParameters SpawnParameters = FActorSpawnParameters();
+		SpawnParameters.bNoFail = true;
+		SpawnParameters.Owner = this;
+		if(auto Bullet = GetWorld()->SpawnActor<ABullet>(FirearmData->BulletClass,
+			Location, Rotation, SpawnParameters))
+		{
+			float AverageErrorAngleInRadians = FMath::DegreesToRadians(FirearmData->Accuracy / 60);
+			if (BarrelAttachment)
+				BarrelAttachment->AccuracyModifier;
+			FVector Direction = Root->GetForwardVector();
+			
+			FQuat RandomRotation = FQuat::MakeFromRotationVector(AverageErrorAngleInRadians * UKismetMathLibrary::RandomUnitVector());
+			Direction = RandomRotation * Direction;
+			FVector BulletVelocity = FirearmData->BulletSpeed * Direction;
+			Bullet->Fire(this, BulletVelocity);
+			FireCounter = 1.f/FirearmData->FireFrequency;
+			BulletsInChamber--;
+			FVector BulletMomentum = BulletVelocity * Bullet->Weight;
+			FVector Impulse = -BulletMomentum / GetWeight();
+			RegisterImpulse(Impulse);
+			return true;
+		}
+	}
 	return false;
 }
 
@@ -37,11 +65,12 @@ void AFirearmBase::Tick(float DeltaSeconds) {
 		FireCounter-=DeltaSeconds;
 }
 
-void AFirearmBase::RegisterHit(TWeakObjectPtr<UPrimitiveComponent> Component) {
-	if(Component.IsValid()) {
+void AFirearmBase::RegisterHit(FHitResult Hit) {
+	auto Component = Hit.GetComponent();
+	if(Component) {
 		GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Green,
 			FString::Printf(TEXT("Hit actor %s"),
-				*Component.Get()->GetOwner()->GetName()));
+				*Component->GetOwner()->GetName()));
 	}
 }
 
@@ -84,7 +113,12 @@ void AFirearmBase::AttachUnderBarrel(AUnderBarrelAttachment* InUnderBarrel, AUnd
 
 bool AFirearmBase::TryAttach(AActor* InActor) {
 	if (InActor) {
-		InActor->AttachToActor(this, FAttachmentTransformRules::KeepRelativeTransform);
+		FAttachmentTransformRules Rules = FAttachmentTransformRules::KeepRelativeTransform;
+		Rules.bWeldSimulatedBodies = true;
+		auto Mesh = Cast<UStaticMeshComponent>(InActor->GetComponentByClass(UStaticMeshComponent::StaticClass()));
+		if (!Mesh)
+			return false;
+		Mesh->AttachToComponent(Root, Rules);
 		if(InActor->IsA(ABarrelAttachment::StaticClass())) {
 			InActor->SetActorLocation(BarrelExitPoint->GetComponentLocation());
 			InActor->SetActorRotation(BarrelExitPoint->GetComponentRotation());
@@ -114,6 +148,10 @@ bool AFirearmBase::TryDetach(AActor* InActor) {
 	return false;
 }
 
+void AFirearmBase::RegisterImpulse(FVector Impulse) {
+	
+}
+
 void AFirearmBase::BeginPlay() {
 	Super::BeginPlay();
 
@@ -141,4 +179,17 @@ void AFirearmBase::BeginPlay() {
 			Cast<AUnderBarrelAttachment>(GetWorld()->SpawnActor(InitialUnderBarrelAttachmentClass)),
 			Discard);
 	}
+}
+
+float AFirearmBase::GetWeight() {
+	float Result = FirearmData->Weight;
+	if (BarrelAttachment)
+		Result+=BarrelAttachment->GetWeight();
+	if (StockAttachment)
+		Result+=StockAttachment->GetWeight();
+	if (OpticsAttachment)
+		Result+=OpticsAttachment->GetWeight();
+	if (UnderBarrelAttachment)
+		Result+=UnderBarrelAttachment->GetWeight();
+	return Result;
 }

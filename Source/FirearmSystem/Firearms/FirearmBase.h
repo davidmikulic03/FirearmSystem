@@ -17,7 +17,7 @@ public:
 	virtual bool CanFire();
 	virtual void Tick(float DeltaSeconds) override;
 
-	void RegisterHit(TWeakObjectPtr<UPrimitiveComponent> Component);
+	void RegisterHit(FHitResult Hit);
 
 	FVector GetBarrelExitLocation();
 	
@@ -75,8 +75,12 @@ public:
 protected:
 	bool TryAttach(AActor* InActor);
 	bool TryDetach(AActor* InActor);
+
+	void RegisterImpulse(FVector Impulse);
 protected:
 	virtual void BeginPlay() override;
+
+	virtual float GetWeight();
 
 protected:
 	float FireCounter = 0.f;

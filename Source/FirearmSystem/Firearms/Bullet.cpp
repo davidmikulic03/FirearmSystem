@@ -23,46 +23,58 @@ ABullet::ABullet() {
 void ABullet::Fire(AFirearmBase* ShotFrom, FVector InVelocity) {
 	SetOwner(ShotFrom);
 	Velocity = 100 * InVelocity;
+	if(GetOwner()) {
+		GetOwner()->GetAttachedActors(IgnoreActors);
+		IgnoreActors.Add(GetOwner());
+		IgnoreActors.Add(this);
+	}
 }
 
-void ABullet::Move(float DeltaSeconds)
+void ABullet::Move(float DeltaSeconds, AActor* OriginIgnore)
 {
 	FVector Acceleration = FVector::UpVector * GetWorld()->GetGravityZ();
 	FVector NewLocation = GetActorLocation() + Velocity * DeltaSeconds + 0.5 * Acceleration * DeltaSeconds * DeltaSeconds;
 	FHitResult Hit;
-	TArray<AActor*> Ignore;
-	if(GetOwner()) {
-		GetOwner()->GetAttachedActors(Ignore);
-		Ignore.Add(GetOwner());
-		Ignore.Add(this);
-	}
+
+	auto NewIgnore = IgnoreActors;
+	NewIgnore.Add(OriginIgnore);
+	
 	bool bHit = UKismetSystemLibrary::SphereTraceSingle(
 		GetWorld(),
 		GetActorLocation(),
 		NewLocation,
 		Collision->GetUnscaledSphereRadius(),
 		UEngineTypes::ConvertToTraceType(ECC_GameTraceChannel1),
-		false, Ignore, EDrawDebugTrace::ForOneFrame, Hit,
+		false, NewIgnore, EDrawDebugTrace::ForOneFrame, Hit,
 		true, FLinearColor::Green, FLinearColor::Red,
 		0.1f);
 	if(bHit) {
-		SetActorLocation(Hit.ImpactPoint);
-		Velocity = FVector::ZeroVector;
-		if(auto f = Cast<AFirearmBase>(GetOwner()))
-			f->RegisterHit(Hit.Component);
-		Destroy();
+		float NewDeltaSeconds = DeltaSeconds * FVector::Distance(GetActorLocation(), NewLocation) / Velocity.Length();
+		HandleImpact(Hit, NewDeltaSeconds);
 	}
 	else
 		SetActorLocation(NewLocation);
 	
 	Velocity += Acceleration * DeltaSeconds;
 
+	
+}
+
+void ABullet::Tick(float DeltaSeconds) {
+	Move(DeltaSeconds, nullptr);
 	if(LifetimeCounter < MaxLifetime)
 		LifetimeCounter+=DeltaSeconds;
 	else Destroy();
 }
 
-void ABullet::Tick(float DeltaSeconds) {
-	Move(DeltaSeconds);
+void ABullet::HandleImpact(FHitResult Hit, float DeltaSeconds) {
+	FHitResult NewHit;
+	Velocity = 0.2 * FMath::GetReflectionVector(Velocity, Hit.ImpactNormal);
+	SetActorLocation(Hit.ImpactPoint);
+	if(auto f = Cast<AFirearmBase>(GetOwner()))
+		f->RegisterHit(Hit);
+	if (Velocity.Length() > 50)	
+		Move(DeltaSeconds, Hit.GetActor());
+	else Destroy();
 }
 
