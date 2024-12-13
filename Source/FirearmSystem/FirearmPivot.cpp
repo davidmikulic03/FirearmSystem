@@ -18,6 +18,8 @@ void UFirearmPivot::BeginPlay() {
 
 void UFirearmPivot::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) {
 	TryFire();
+	DeltaTime = FMath::Clamp(DeltaTime, 0.f, 1.f/30);
+	// ClampVelocities();
 	UpdateState(DeltaTime);
 	Resist(DeltaTime);
 }
@@ -40,21 +42,22 @@ bool UFirearmPivot::Equip(class AFirearmBase* InFirearm) {
 }
 
 void UFirearmPivot::AddImpulse(FVector Impulse) {
-	FVector Offset = Firearm->Pivot->GetComponentLocation() - Firearm->GetActorLocation();
-	FVector AngularImpulse = Impulse.Cross(Offset);
-	float Rest = Impulse.Length() - AngularImpulse.Length();
-	FVector LinearImpulse = -GetForwardVector() * Rest;
+	FVector Offset = Firearm->GetActorLocation() - Firearm->Pivot->GetComponentLocation();
+	FVector AngularImpulse = Offset.Cross(Impulse) / 100.f;
+	// float Rest = Impulse.Length() - AngularImpulse.Length();
+	FVector LinearImpulse = Impulse;
 	LinearVelocity+=LinearImpulse;
 	AngularVelocity+=AngularImpulse;
 }
 
 void UFirearmPivot::UpdateState(float DeltaSeconds) {
+	// if (DeltaSeconds * AngularVelocity.Length() > 20)
 	FQuat DeltaRotation = FQuat::MakeFromRotationVector(AngularVelocity * DeltaSeconds);
-	FVector LocalPivotLocation = Firearm->Pivot->GetComponentLocation() - GetComponentLocation();
-	FVector CorrectiveOffset = DeltaRotation * LocalPivotLocation - LocalPivotLocation;
+	FVector Offset = Firearm->Pivot->GetComponentLocation() - Firearm->Root->GetComponentLocation();
+	Firearm->Root->AddWorldOffset(Offset);
 	Firearm->Root->AddWorldRotation(DeltaRotation);
+	Firearm->Root->AddWorldOffset(-Offset);
 	Firearm->Root->AddWorldOffset(LinearVelocity * DeltaSeconds);
-	
 }
 
 void UFirearmPivot::Resist(float DeltaSeconds) {
@@ -80,4 +83,5 @@ void UFirearmPivot::ResistAngular(float DeltaSeconds) {
 	FVector Torque = -Firearm->GetWeight() * (AngularProportional * DeltaRotation.ToRotationVector() + AngularDerivative * AngularVelocity);
 	AngularVelocity += Torque * DeltaSeconds;
 }
+
 
