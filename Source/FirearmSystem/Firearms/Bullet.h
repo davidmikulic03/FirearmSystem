@@ -23,7 +23,7 @@ public:
 		class USphereComponent* Collision;
 	UPROPERTY(EditDefaultsOnly)
 		class UStaticMeshComponent* Mesh;
-	UPROPERTY(EditDefaultsOnly, meta=(Units="g"))
+	UPROPERTY(EditDefaultsOnly, meta=(Units="kg"))
 		float Weight = 0.07f;
 
 	float MaxLifetime = 30.f;

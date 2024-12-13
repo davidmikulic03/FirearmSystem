@@ -6,11 +6,14 @@
 #include "Attachments/OpticAttachment.h"
 #include "Attachments/StockAttachment.h"
 #include "Attachments/UnderBarrelAttachment.h"
+#include "FirearmSystem/FirearmPivot.h"
 #include "Kismet/KismetMathLibrary.h"
 
 AFirearmBase::AFirearmBase() {
 	Root = CreateDefaultSubobject<UStaticMeshComponent>("Firearm");
 	RootComponent = Root;
+	Pivot = CreateDefaultSubobject<USceneComponent>("Pivot");
+	Pivot->SetupAttachment(Root);
 
 	BarrelExitPoint = CreateDefaultSubobject<USceneComponent>("Barrel Attachment Point");
 	BarrelExitPoint->SetupAttachment(Root);
@@ -20,6 +23,7 @@ AFirearmBase::AFirearmBase() {
 	OpticsAttachmentPoint->SetupAttachment(Root);
 	UnderBarrelAttachmentPoint = CreateDefaultSubobject<USceneComponent>("Under-barrel Attachment Point");
 	UnderBarrelAttachmentPoint->SetupAttachment(Root);
+
 
 	PrimaryActorTick.bCanEverTick = true;
 }
@@ -149,7 +153,9 @@ bool AFirearmBase::TryDetach(AActor* InActor) {
 }
 
 void AFirearmBase::RegisterImpulse(FVector Impulse) {
-	
+	if (auto c = Cast<UFirearmPivot>(GetRootComponent()->GetAttachParent())) {
+		c->AddImpulse(Impulse);
+	}
 }
 
 void AFirearmBase::BeginPlay() {

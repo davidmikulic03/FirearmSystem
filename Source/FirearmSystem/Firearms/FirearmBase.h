@@ -26,6 +26,8 @@ public:
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 		class UFirearmCoreData* FirearmData;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+		USceneComponent* Pivot;
 	
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly)
 		class ABarrelAttachment* BarrelAttachment;
@@ -72,6 +74,7 @@ public:
 	UFUNCTION(BlueprintCallable)
 	FORCEINLINE bool HasOpticsAttachment() const { return OpticsAttachment!=nullptr; }
 
+	virtual float GetWeight();
 protected:
 	bool TryAttach(AActor* InActor);
 	bool TryDetach(AActor* InActor);
@@ -80,11 +83,12 @@ protected:
 protected:
 	virtual void BeginPlay() override;
 
-	virtual float GetWeight();
 
 protected:
 	float FireCounter = 0.f;
 	int BulletsInChamber = 0;
+
+	
 };
 
 

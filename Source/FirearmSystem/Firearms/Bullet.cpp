@@ -5,6 +5,7 @@
 
 #include "FirearmBase.h"
 #include "Components/SphereComponent.h"
+#include "FirearmSystem/Hittable.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Kismet/KismetSystemLibrary.h"
 
@@ -68,13 +69,15 @@ void ABullet::Tick(float DeltaSeconds) {
 }
 
 void ABullet::HandleImpact(FHitResult Hit, float DeltaSeconds) {
-	FHitResult NewHit;
-	Velocity = 0.2 * FMath::GetReflectionVector(Velocity, Hit.ImpactNormal);
-	SetActorLocation(Hit.ImpactPoint);
-	if(auto f = Cast<AFirearmBase>(GetOwner()))
-		f->RegisterHit(Hit);
-	if (Velocity.Length() > 50)	
-		Move(DeltaSeconds, Hit.GetActor());
-	else Destroy();
+	if (auto a = Cast<IHittable>(Hit.GetActor())) {
+		if (a->HandleImpact(this, Hit))
+			Move(DeltaSeconds, Hit.GetActor());
+	}
+	Destroy();
+	// Velocity = 0.2 * FMath::GetReflectionVector(Velocity, Hit.ImpactNormal);
+	// SetActorLocation(Hit.Location);
+	// if(auto f = Cast<AFirearmBase>(GetOwner()))
+	// 	f->RegisterHit(Hit);
+	// else Destroy();
 }
 
