@@ -26,6 +26,7 @@ void ABullet::Fire(AFirearmBase* ShotFrom, FVector InVelocity) {
 	Velocity = 100 * InVelocity;
 	if(GetOwner()) {
 		GetOwner()->GetAttachedActors(IgnoreActors);
+		IgnoreActors.Add(GetOwner()->GetAttachParentActor());
 		IgnoreActors.Add(GetOwner());
 		IgnoreActors.Add(this);
 	}

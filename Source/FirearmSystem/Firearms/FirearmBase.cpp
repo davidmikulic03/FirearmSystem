@@ -154,7 +154,7 @@ bool AFirearmBase::TryDetach(AActor* InActor) {
 
 void AFirearmBase::RegisterImpulse(FVector Impulse) {
 	if (auto c = Cast<UFirearmPivot>(GetRootComponent()->GetAttachParent())) {
-		c->AddImpulse(Impulse);
+		c->AddImpulse(Impulse, true);
 	}
 }
 

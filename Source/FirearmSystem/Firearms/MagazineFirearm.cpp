@@ -52,9 +52,7 @@ float AMagazineFirearm::GetWeight()
 	return Result;
 }
 
-void AMagazineFirearm::Tick(float DeltaTime)
-{
+void AMagazineFirearm::Tick(float DeltaTime) {
 	Super::Tick(DeltaTime);
-	TryFire();
 }
 

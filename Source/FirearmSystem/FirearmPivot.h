@@ -16,6 +16,8 @@ class FIREARMSYSTEM_API UFirearmPivot : public USceneComponent
 public:
 	UFirearmPivot();
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(Units="rad"))
+		float RecoilRandomness = FMath::DegreesToRadians(10);
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		float LinearProportional = 5.f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -37,7 +39,7 @@ public:
 	UFUNCTION(BlueprintCallable)
 		bool Equip(class AFirearmBase* InFirearm);
 
-	void AddImpulse(FVector Impulse);
+	void AddImpulse(FVector Impulse, bool bRandomize = false);
 	
 	UPROPERTY()
 		USceneComponent* Target;
@@ -52,5 +54,4 @@ protected:
 	
 	FVector LinearVelocity = FVector::ZeroVector;
 	FVector AngularVelocity = FVector::ZeroVector;
-	
 };

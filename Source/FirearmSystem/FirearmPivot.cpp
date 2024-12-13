@@ -4,6 +4,7 @@
 #include "Firearms/FirearmBase.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "SceneQueries/SceneSnappingManager.h"
 
 UFirearmPivot::UFirearmPivot() {
 
@@ -17,7 +18,6 @@ void UFirearmPivot::BeginPlay() {
 }
 
 void UFirearmPivot::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) {
-	TryFire();
 	DeltaTime = FMath::Clamp(DeltaTime, 0.f, 1.f/30);
 	// ClampVelocities();
 	UpdateState(DeltaTime);
@@ -38,26 +38,41 @@ bool UFirearmPivot::Equip(class AFirearmBase* InFirearm) {
 	Firearm->SetActorRotation(GetComponentRotation());
 	FVector Offset = GetComponentLocation() - Firearm->Pivot->GetComponentLocation();
 	Firearm->AddActorWorldOffset(Offset);
+	TArray<AActor*> Children;
+	Firearm->GetAttachedActors(Children);
+	Children.Add(Firearm);
+	for (auto Child : Children) {
+		Child->SetActorEnableCollision(false);
+	}
 	return true;
 }
 
-void UFirearmPivot::AddImpulse(FVector Impulse) {
+void UFirearmPivot::AddImpulse(FVector Impulse, bool bRandomize) {
+	if (bRandomize) {
+		FVector RotationVector = RecoilRandomness * UKismetMathLibrary::RandomUnitVector();
+		FQuat Rotation = FQuat::MakeFromRotationVector(RotationVector);
+		Impulse = Rotation * Impulse;
+	}
 	FVector Offset = Firearm->GetActorLocation() - Firearm->Pivot->GetComponentLocation();
 	FVector AngularImpulse = Offset.Cross(Impulse) / 100.f;
-	// float Rest = Impulse.Length() - AngularImpulse.Length();
 	FVector LinearImpulse = Impulse;
+
+	FTransform ToLocal = GetComponentTransform().Inverse();
 	LinearVelocity+=LinearImpulse;
-	AngularVelocity+=AngularImpulse;
+	AngularVelocity+=ToLocal.TransformVectorNoScale(AngularImpulse);
 }
 
 void UFirearmPivot::UpdateState(float DeltaSeconds) {
 	// if (DeltaSeconds * AngularVelocity.Length() > 20)
-	FQuat DeltaRotation = FQuat::MakeFromRotationVector(AngularVelocity * DeltaSeconds);
+
+	FTransform ToWorld = GetComponentTransform();
+	FQuat DeltaRotation = FQuat::MakeFromRotationVector(ToWorld.TransformVectorNoScale(AngularVelocity * DeltaSeconds));
 	FVector Offset = Firearm->Pivot->GetComponentLocation() - Firearm->Root->GetComponentLocation();
-	Firearm->Root->AddWorldOffset(Offset);
-	Firearm->Root->AddWorldRotation(DeltaRotation);
-	Firearm->Root->AddWorldOffset(-Offset);
-	Firearm->Root->AddWorldOffset(LinearVelocity * DeltaSeconds);
+	Firearm->Root->AddWorldOffset(Offset, false, nullptr, ETeleportType::TeleportPhysics);
+	Firearm->Root->AddWorldRotation(DeltaRotation, false, nullptr, ETeleportType::TeleportPhysics);
+	Firearm->Root->AddWorldOffset(-Offset, false, nullptr, ETeleportType::TeleportPhysics);
+	Firearm->Root->AddWorldOffset(LinearVelocity * DeltaSeconds, false, nullptr, ETeleportType::TeleportPhysics);
+	
 }
 
 void UFirearmPivot::Resist(float DeltaSeconds) {
@@ -73,15 +88,13 @@ void UFirearmPivot::ResistLinear(float DeltaSeconds) {
 }
 
 void UFirearmPivot::ResistAngular(float DeltaSeconds) {
-	FVector InertiaVector = Firearm->Root->BodyInstance.GetBodyInertiaTensor();
-	FMatrix InertiaTensor = FMatrix::Identity;
-	InertiaTensor.M[0][0] = InertiaVector.X;
-	InertiaTensor.M[1][1] = InertiaVector.Y;
-	InertiaTensor.M[2][2] = InertiaVector.Z;
-
-	FQuat DeltaRotation = (Firearm->GetActorRotation() - GetComponentRotation()).Quaternion();
-	FVector Torque = -Firearm->GetWeight() * (AngularProportional * DeltaRotation.ToRotationVector() + AngularDerivative * AngularVelocity);
+	FTransform ToWorld = GetComponentTransform();
+	FQuat DeltaRotation = GetComponentRotation().Quaternion().Inverse() * Firearm->GetActorRotation().Quaternion();
+	FVector AsRotationVector = DeltaRotation.ToRotationVector();
+	FVector Torque = -Firearm->GetWeight() * (AngularProportional * AsRotationVector + AngularDerivative * AngularVelocity);
 	AngularVelocity += Torque * DeltaSeconds;
+	// FVector Torque = -Firearm->GetWeight() * (AngularProportional * AsRotationVector + AngularDerivative * ToWorld.TransformVectorNoScale(AngularVelocity));
+	// AngularVelocity += ToWorld.InverseTransformVectorNoScale(Torque * DeltaSeconds);
 }
 
 
