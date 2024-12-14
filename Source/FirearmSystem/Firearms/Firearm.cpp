@@ -1,4 +1,4 @@
-﻿#include "FirearmBase.h"
+﻿#include "Firearm.h"
 
 #include "Bullet.h"
 #include "FirearmCoreData.h"
@@ -6,14 +6,16 @@
 #include "Attachments/OpticAttachment.h"
 #include "Attachments/StockAttachment.h"
 #include "Attachments/UnderBarrelAttachment.h"
-#include "FirearmSystem/FirearmPivot.h"
+#include "FirearmPivot.h"
+#include "WeightedBodyContactPoint.h"
+#include "FirearmSystem/Core/Gunslinger.h"
 #include "Kismet/KismetMathLibrary.h"
 
-AFirearmBase::AFirearmBase() {
+AFirearm::AFirearm() {
 	Root = CreateDefaultSubobject<UStaticMeshComponent>("Firearm");
 	RootComponent = Root;
-	Pivot = CreateDefaultSubobject<USceneComponent>("Pivot");
-	Pivot->SetupAttachment(Root);
+	Hand = CreateDefaultSubobject<UWeightedBodyContactPoint>("Pivot");
+	Hand->SetupAttachment(Root);
 
 	BarrelExitPoint = CreateDefaultSubobject<USceneComponent>("Barrel Attachment Point");
 	BarrelExitPoint->SetupAttachment(Root);
@@ -28,7 +30,7 @@ AFirearmBase::AFirearmBase() {
 	PrimaryActorTick.bCanEverTick = true;
 }
 
-bool AFirearmBase::TryFire() {
+bool AFirearm::TryFire() {
 	if(CanFire() && BulletsInChamber > 0) {
 		const FVector Location = GetBarrelExitLocation();
 		const FRotator Rotation = GetActorRotation();
@@ -58,18 +60,18 @@ bool AFirearmBase::TryFire() {
 	return false;
 }
 
-bool AFirearmBase::CanFire() {
+bool AFirearm::CanFire() {
 	if(FirearmData && FireCounter <= 0)
 		return true;
 	return false;
 }
 
-void AFirearmBase::Tick(float DeltaSeconds) {
+void AFirearm::Tick(float DeltaSeconds) {
 	if(FireCounter > 0)
 		FireCounter-=DeltaSeconds;
 }
 
-void AFirearmBase::RegisterHit(FHitResult Hit) {
+void AFirearm::RegisterHit(FHitResult Hit) {
 	auto Component = Hit.GetComponent();
 	if(Component) {
 		GEngine->AddOnScreenDebugMessage(-1, 3.f, FColor::Green,
@@ -78,35 +80,35 @@ void AFirearmBase::RegisterHit(FHitResult Hit) {
 	}
 }
 
-FVector AFirearmBase::GetBarrelExitLocation() {
+FVector AFirearm::GetBarrelExitLocation() {
 	if(!BarrelAttachment)
 		return BarrelExitPoint->GetComponentLocation();
 	else 
 		return BarrelAttachment->GetBarrelExitLocation();
 }
 
-void AFirearmBase::AttachBarrel(ABarrelAttachment* InBarrel, ABarrelAttachment*& OutBarrel) {
+void AFirearm::AttachBarrel(ABarrelAttachment* InBarrel, ABarrelAttachment*& OutBarrel) {
 	if (TryDetach(OutBarrel))
 		OutBarrel = BarrelAttachment;
 	if (TryAttach(InBarrel))
 		BarrelAttachment = InBarrel;
 }
 
-void AFirearmBase::AttachStock(AStockAttachment* InStock, AStockAttachment*& OutStock) {
+void AFirearm::AttachStock(AStockAttachment* InStock, AStockAttachment*& OutStock) {
 	if (TryDetach(OutStock))
 		OutStock = StockAttachment;
 	if (TryAttach(InStock))
 		StockAttachment = InStock;
 }
 
-void AFirearmBase::AttachOptics(AOpticsAttachment* InOptics, AOpticsAttachment*& OutOptics) {
+void AFirearm::AttachOptics(AOpticsAttachment* InOptics, AOpticsAttachment*& OutOptics) {
 	if (TryDetach(OutOptics))
 		OutOptics = OpticsAttachment;
 	if (TryAttach(InOptics))
 		OpticsAttachment = InOptics;
 }
 
-void AFirearmBase::AttachUnderBarrel(AUnderBarrelAttachment* InUnderBarrel, AUnderBarrelAttachment*& OutUnderBarrel) {
+void AFirearm::AttachUnderBarrel(AUnderBarrelAttachment* InUnderBarrel, AUnderBarrelAttachment*& OutUnderBarrel) {
 	if (TryDetach(OutUnderBarrel))
 		OutUnderBarrel = UnderBarrelAttachment;
 	if (TryAttach(InUnderBarrel)) {
@@ -115,7 +117,7 @@ void AFirearmBase::AttachUnderBarrel(AUnderBarrelAttachment* InUnderBarrel, AUnd
 	}
 }
 
-bool AFirearmBase::TryAttach(AActor* InActor) {
+bool AFirearm::TryAttach(AActor* InActor) {
 	if (InActor) {
 		FAttachmentTransformRules Rules = FAttachmentTransformRules::KeepRelativeTransform;
 		Rules.bWeldSimulatedBodies = true;
@@ -144,7 +146,7 @@ bool AFirearmBase::TryAttach(AActor* InActor) {
 	return false;
 }
 
-bool AFirearmBase::TryDetach(AActor* InActor) {
+bool AFirearm::TryDetach(AActor* InActor) {
 	if (InActor) {
 		InActor->DetachFromActor(FDetachmentTransformRules::KeepRelativeTransform);
 		return true;
@@ -152,13 +154,28 @@ bool AFirearmBase::TryDetach(AActor* InActor) {
 	return false;
 }
 
-void AFirearmBase::RegisterImpulse(FVector Impulse) {
-	if (auto c = Cast<UFirearmPivot>(GetRootComponent()->GetAttachParent())) {
-		c->AddImpulse(Impulse, true);
+void AFirearm::EvaluateTruePivot() {
+	if (!TruePivot) {
+		TruePivot = Cast<UWeightedBodyContactPoint>(AddComponentByClass(UWeightedBodyContactPoint::StaticClass(), false, GetTransform(), false));
+	}
+	float WeightSum = Hand->LocationWeight;
+	TruePivot->SetRelativeLocation(Hand->GetRelativeLocation() * Hand->LocationWeight);
+	TruePivot->ResistParams = Hand->ResistParams;
+	if (StockAttachment) {
+		WeightSum += StockAttachment->Pivot->LocationWeight;
+		TruePivot->ResistParams += StockAttachment->Pivot->ResistParams;
+		TruePivot->AddRelativeLocation(StockAttachment->Pivot->GetRelativeLocation() * StockAttachment->Pivot->LocationWeight);
+	}
+	TruePivot->SetRelativeLocation(TruePivot->GetRelativeLocation() / WeightSum);
+}
+
+void AFirearm::RegisterImpulse(FVector Impulse) {
+	if (auto p = Cast<UFirearmPivot>(GetRootComponent()->GetAttachParent())) {
+		p->AddImpulse(Impulse, true);
 	}
 }
 
-void AFirearmBase::BeginPlay() {
+void AFirearm::BeginPlay() {
 	Super::BeginPlay();
 
 	if(InitialBarrelAttachmentClass) {
@@ -185,9 +202,10 @@ void AFirearmBase::BeginPlay() {
 			Cast<AUnderBarrelAttachment>(GetWorld()->SpawnActor(InitialUnderBarrelAttachmentClass)),
 			Discard);
 	}
+	EvaluateTruePivot();
 }
 
-float AFirearmBase::GetWeight() {
+float AFirearm::GetWeight() {
 	float Result = FirearmData->Weight;
 	if (BarrelAttachment)
 		Result+=BarrelAttachment->GetWeight();

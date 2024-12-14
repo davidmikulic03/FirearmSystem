@@ -1,7 +1,7 @@
 #include "FirearmPivot.h"
 
+#include "Firearm.h"
 #include "SceneRenderTargetParameters.h"
-#include "Firearms/FirearmBase.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "SceneQueries/SceneSnappingManager.h"
@@ -13,8 +13,9 @@ UFirearmPivot::UFirearmPivot() {
 
 void UFirearmPivot::BeginPlay() {
 	Super::BeginPlay();
-	Equip(Firearm);
-	Target = Cast<USceneComponent>(GetOwner()->AddComponentByClass(USceneComponent::StaticClass(), false, GetOwner()->GetTransform(), true));
+	// Target = Cast<USceneComponent>(GetOwner()->AddComponentByClass(USceneComponent::StaticClass(), false, GetOwner()->GetTransform(), true));
+	ResistParams = BaseResistParams;
+	
 }
 
 void UFirearmPivot::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) {
@@ -28,7 +29,7 @@ bool UFirearmPivot::TryFire() {
 	return Firearm ? Firearm->TryFire() : false;
 }
 
-bool UFirearmPivot::Equip(class AFirearmBase* InFirearm) {
+bool UFirearmPivot::Equip(class AFirearm* InFirearm) {
 	if (!InFirearm)
 		return false;
 	Firearm = InFirearm;
@@ -36,7 +37,7 @@ bool UFirearmPivot::Equip(class AFirearmBase* InFirearm) {
 	Rules.bWeldSimulatedBodies = true;
 	Firearm->Root->AttachToComponent(this, Rules);
 	Firearm->SetActorRotation(GetComponentRotation());
-	FVector Offset = GetComponentLocation() - Firearm->Pivot->GetComponentLocation();
+	FVector Offset = GetComponentLocation() - Firearm->Hand->GetComponentLocation();
 	Firearm->AddActorWorldOffset(Offset);
 	TArray<AActor*> Children;
 	Firearm->GetAttachedActors(Children);
@@ -49,11 +50,11 @@ bool UFirearmPivot::Equip(class AFirearmBase* InFirearm) {
 
 void UFirearmPivot::AddImpulse(FVector Impulse, bool bRandomize) {
 	if (bRandomize) {
-		FVector RotationVector = RecoilRandomness * UKismetMathLibrary::RandomUnitVector();
+		FVector RotationVector = ResistParams.RecoilRandomness * UKismetMathLibrary::RandomUnitVector();
 		FQuat Rotation = FQuat::MakeFromRotationVector(RotationVector);
 		Impulse = Rotation * Impulse;
 	}
-	FVector Offset = Firearm->GetActorLocation() - Firearm->Pivot->GetComponentLocation();
+	FVector Offset = Firearm->GetActorLocation() - Firearm->TruePivot->GetComponentLocation();
 	FVector AngularImpulse = Offset.Cross(Impulse) / 100.f;
 	FVector LinearImpulse = Impulse;
 
@@ -67,7 +68,7 @@ void UFirearmPivot::UpdateState(float DeltaSeconds) {
 
 	FTransform ToWorld = GetComponentTransform();
 	FQuat DeltaRotation = FQuat::MakeFromRotationVector(ToWorld.TransformVectorNoScale(AngularVelocity * DeltaSeconds));
-	FVector Offset = Firearm->Pivot->GetComponentLocation() - Firearm->Root->GetComponentLocation();
+	FVector Offset = Firearm->TruePivot->GetComponentLocation() - Firearm->Root->GetComponentLocation();
 	Firearm->Root->AddWorldOffset(Offset, false, nullptr, ETeleportType::TeleportPhysics);
 	Firearm->Root->AddWorldRotation(DeltaRotation, false, nullptr, ETeleportType::TeleportPhysics);
 	Firearm->Root->AddWorldOffset(-Offset, false, nullptr, ETeleportType::TeleportPhysics);
@@ -81,9 +82,9 @@ void UFirearmPivot::Resist(float DeltaSeconds) {
 }
 
 void UFirearmPivot::ResistLinear(float DeltaSeconds) {
-	FVector DeltaPosition = GetComponentLocation() - Firearm->Pivot->GetComponentLocation();
+	FVector DeltaPosition = GetComponentLocation() - Firearm->Hand->GetComponentLocation();
 	FVector DeltaVelocity = -LinearVelocity;
-	FVector Acceleration = LinearProportional * DeltaPosition + LinearDerivative * DeltaVelocity;
+	FVector Acceleration = ResistParams.LinearProportional * DeltaPosition + ResistParams.LinearDerivative * DeltaVelocity;
 	LinearVelocity += Acceleration * DeltaSeconds;
 }
 
@@ -91,7 +92,7 @@ void UFirearmPivot::ResistAngular(float DeltaSeconds) {
 	FTransform ToWorld = GetComponentTransform();
 	FQuat DeltaRotation = GetComponentRotation().Quaternion().Inverse() * Firearm->GetActorRotation().Quaternion();
 	FVector AsRotationVector = DeltaRotation.ToRotationVector();
-	FVector Torque = -Firearm->GetWeight() * (AngularProportional * AsRotationVector + AngularDerivative * AngularVelocity);
+	FVector Torque = -Firearm->GetWeight() * (ResistParams.AngularProportional * AsRotationVector + ResistParams.AngularDerivative * AngularVelocity);
 	AngularVelocity += Torque * DeltaSeconds;
 	// FVector Torque = -Firearm->GetWeight() * (AngularProportional * AsRotationVector + AngularDerivative * ToWorld.TransformVectorNoScale(AngularVelocity));
 	// AngularVelocity += ToWorld.InverseTransformVectorNoScale(Torque * DeltaSeconds);

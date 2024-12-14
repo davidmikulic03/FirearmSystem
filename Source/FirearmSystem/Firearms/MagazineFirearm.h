@@ -3,11 +3,11 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "FirearmBase.h"
+#include "Firearm.h"
 #include "MagazineFirearm.generated.h"
 
 UCLASS()
-class FIREARMSYSTEM_API AMagazineFirearm : public AFirearmBase
+class FIREARMSYSTEM_API AMagazineFirearm : public AFirearm
 {
 	GENERATED_BODY()
 

@@ -3,8 +3,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "RecoilResistParams.h"
 #include "Components/SceneComponent.h"
-#include "Firearms/FirearmBase.h"
+#include "Firearm.h"
 #include "FirearmPivot.generated.h"
 
 
@@ -16,16 +17,9 @@ class FIREARMSYSTEM_API UFirearmPivot : public USceneComponent
 public:
 	UFirearmPivot();
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(Units="rad"))
-		float RecoilRandomness = FMath::DegreesToRadians(10);
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		float LinearProportional = 5.f;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		float LinearDerivative = 5.f;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		float AngularProportional = 5.f;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		float AngularDerivative = 5.f;
+	UPROPERTY(EditDefaultsOnly)
+		FRecoilResistParams BaseResistParams;
+	FRecoilResistParams ResistParams;
 	
 protected:
 	virtual void BeginPlay() override;
@@ -37,14 +31,14 @@ public:
 	UFUNCTION(BlueprintCallable)
 		bool TryFire();
 	UFUNCTION(BlueprintCallable)
-		bool Equip(class AFirearmBase* InFirearm);
+		bool Equip(class AFirearm* InFirearm);
 
 	void AddImpulse(FVector Impulse, bool bRandomize = false);
 	
 	UPROPERTY()
 		USceneComponent* Target;
 	UPROPERTY(EditInstanceOnly)
-		class AFirearmBase* Firearm;
+		class AFirearm* Firearm;
 	
 protected:
 	void UpdateState(float DeltaSeconds);

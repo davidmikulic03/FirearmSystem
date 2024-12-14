@@ -3,7 +3,7 @@
 
 #include "Bullet.h"
 
-#include "FirearmBase.h"
+#include "Firearm.h"
 #include "Components/SphereComponent.h"
 #include "FirearmSystem/Hittable.h"
 #include "GameFramework/ProjectileMovementComponent.h"
@@ -21,7 +21,7 @@ ABullet::ABullet() {
 	PrimaryActorTick.bCanEverTick = true;
 }
 
-void ABullet::Fire(AFirearmBase* ShotFrom, FVector InVelocity) {
+void ABullet::Fire(AFirearm* ShotFrom, FVector InVelocity) {
 	SetOwner(ShotFrom);
 	Velocity = 100 * InVelocity;
 	if(GetOwner()) {

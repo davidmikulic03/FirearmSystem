@@ -7,7 +7,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "EnhancedInputComponent.h"
-#include "FirearmSystem/FirearmPivot.h"
+#include "FirearmSystem/Firearms/FirearmPivot.h"
 #include "Kismet/GameplayStatics.h"
 
 
@@ -77,10 +77,10 @@ void AGunslinger::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (auto a = Cast<AFirearmBase>(UGameplayStatics::GetActorOfClass(GetWorld(), AFirearmBase::StaticClass()))) {
-		FirearmPivot->Equip(a);
+	if (auto f = Cast<AFirearm>(UGameplayStatics::GetActorOfClass(GetWorld(), AFirearm::StaticClass()))) {
+		FirearmPivot->Equip(f);
+		SumResistParams(f->TruePivot->ResistParams);
 	}
-	
 }
 
 void AGunslinger::Tick(float DeltaTime) {
@@ -117,3 +117,22 @@ void AGunslinger::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 	Input->BindAction(AutomaticFireAction, ETriggerEvent::Started, this, &AGunslinger::StartFiring);
 	Input->BindAction(AutomaticFireAction, ETriggerEvent::Completed, this, &AGunslinger::StopFiring);
 }
+
+void AGunslinger::SumResistParams(struct FRecoilResistParams Other) {
+	
+	if(Other.RecoilRandomness >= 0) FirearmPivot->ResistParams.RecoilRandomness = FirearmPivot->ResistParams.RecoilRandomness + Other.RecoilRandomness;
+	else FirearmPivot->ResistParams.RecoilRandomness = FirearmPivot->ResistParams.RecoilRandomness * FMath::Exp(Other.RecoilRandomness / FirearmPivot->ResistParams.RecoilRandomness);
+        
+	if(Other.LinearProportional >= 0) FirearmPivot->ResistParams.LinearProportional = FirearmPivot->ResistParams.LinearProportional + Other.LinearProportional;
+	else FirearmPivot->ResistParams.LinearProportional = FirearmPivot->ResistParams.LinearProportional * FMath::Exp(Other.LinearProportional / FirearmPivot->ResistParams.LinearProportional);
+        
+	if(Other.LinearDerivative >= 0) FirearmPivot->ResistParams.LinearDerivative = FirearmPivot->ResistParams.LinearDerivative + Other.LinearDerivative;
+	else FirearmPivot->ResistParams.LinearDerivative = FirearmPivot->ResistParams.LinearDerivative * FMath::Exp(Other.LinearDerivative / FirearmPivot->ResistParams.LinearDerivative);
+
+	if(Other.AngularProportional >= 0) FirearmPivot->ResistParams.AngularProportional = FirearmPivot->ResistParams.AngularProportional + Other.AngularProportional;
+	else FirearmPivot->ResistParams.AngularProportional = FirearmPivot->ResistParams.AngularProportional * FMath::Exp(Other.AngularProportional / FirearmPivot->ResistParams.AngularProportional);
+        
+	if(Other.AngularDerivative >= 0) FirearmPivot->ResistParams.AngularDerivative = FirearmPivot->ResistParams.AngularDerivative + Other.AngularDerivative;
+	else FirearmPivot->ResistParams.AngularDerivative = FirearmPivot->ResistParams.AngularDerivative * FMath::Exp(Other.AngularDerivative / FirearmPivot->ResistParams.AngularDerivative);
+}
+

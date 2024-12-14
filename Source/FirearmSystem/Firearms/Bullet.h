@@ -12,7 +12,7 @@ class FIREARMSYSTEM_API ABullet : public AActor
 public:
 	ABullet();
 
-	virtual void Fire(class AFirearmBase* ShotFrom, FVector InVelocity);
+	virtual void Fire(class AFirearm* ShotFrom, FVector InVelocity);
 
 	virtual void Move(float DeltaSeconds, AActor* OriginIgnore);
 

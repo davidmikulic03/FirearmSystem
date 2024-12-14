@@ -11,6 +11,6 @@ class FIREARMSYSTEM_API AStockAttachment : public AFirearmAttachment {
 public:
 	AStockAttachment();
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Attachment", meta=(UIMin=0.f, UIMax=1.f))
-		float RecoilMultiplier = 1.f;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+		class UWeightedBodyContactPoint* Pivot;
 };

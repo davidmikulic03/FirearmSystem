@@ -1,16 +1,18 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "WeightedBodyContactPoint.h"
+#include "Attachments/StockAttachment.h"
 #include "GameFramework/Actor.h"
 
-#include "FirearmBase.generated.h"
+#include "Firearm.generated.h"
 
 UCLASS(Abstract)
-class FIREARMSYSTEM_API AFirearmBase : public AActor {
+class FIREARMSYSTEM_API AFirearm : public AActor {
 	GENERATED_BODY()
 
 public:
-	AFirearmBase();
+	AFirearm();
 
 	UFUNCTION(BlueprintCallable)
 		virtual bool TryFire();
@@ -27,7 +29,9 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 		class UFirearmCoreData* FirearmData;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-		USceneComponent* Pivot;
+		class UWeightedBodyContactPoint* Hand;
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly)
+		class UWeightedBodyContactPoint* TruePivot;
 	
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly)
 		class ABarrelAttachment* BarrelAttachment;
@@ -79,6 +83,8 @@ protected:
 	bool TryAttach(AActor* InActor);
 	bool TryDetach(AActor* InActor);
 
+	void EvaluateTruePivot();
+
 	void RegisterImpulse(FVector Impulse);
 protected:
 	virtual void BeginPlay() override;
@@ -90,5 +96,3 @@ protected:
 
 	
 };
-
-
