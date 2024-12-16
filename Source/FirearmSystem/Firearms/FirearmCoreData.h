@@ -31,7 +31,12 @@ public:
 		float FireFrequency = 2.f;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(UIMin=1))
 		int ChamberCapacity = 1;
-
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(AllowAbstract="false"))
+		TSubclassOf<class ABarrelAttachment> DefaultBarrelClass;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta=(AllowAbstract="false"))
+		TSubclassOf<class AStockAttachment> DefaultStockClass;
+	
 	UPROPERTY(EditDefaultsOnly)
 		TSubclassOf<class ABullet> BulletClass;
 	

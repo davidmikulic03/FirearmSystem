@@ -178,28 +178,30 @@ void AFirearm::RegisterImpulse(FVector Impulse) {
 void AFirearm::BeginPlay() {
 	Super::BeginPlay();
 
-	if(InitialBarrelAttachmentClass) {
+	UClass* BarrelClass = InitialBarrelAttachmentClass ? InitialBarrelAttachmentClass : FirearmData->DefaultBarrelClass;
+	if(BarrelClass) {
 		ABarrelAttachment* Discard = nullptr;
 		AttachBarrel(
-			Cast<ABarrelAttachment>(GetWorld()->SpawnActor(InitialBarrelAttachmentClass)),
+			GetWorld()->SpawnActor<ABarrelAttachment>(BarrelClass),
 			Discard);
 	}
-	if(InitialStockAttachmentClass) {
+	UClass* StockClass = InitialStockAttachmentClass ? InitialStockAttachmentClass : FirearmData->DefaultStockClass;
+	if(StockClass) {
 		AStockAttachment* Discard = nullptr;
 		AttachStock(
-			Cast<AStockAttachment>(GetWorld()->SpawnActor(InitialStockAttachmentClass)),
+			GetWorld()->SpawnActor<AStockAttachment>(StockClass),
 			Discard);
 	}
 	if(InitialOpticsAttachmentClass) {
 		AOpticsAttachment* Discard = nullptr;
 		AttachOptics(
-			Cast<AOpticsAttachment>(GetWorld()->SpawnActor(InitialOpticsAttachmentClass)),
+			GetWorld()->SpawnActor<AOpticsAttachment>(InitialOpticsAttachmentClass),
 			Discard);
 	}
 	if(InitialUnderBarrelAttachmentClass) {
 		AUnderBarrelAttachment* Discard = nullptr;
 		AttachUnderBarrel(
-			Cast<AUnderBarrelAttachment>(GetWorld()->SpawnActor(InitialUnderBarrelAttachmentClass)),
+			GetWorld()->SpawnActor<AUnderBarrelAttachment>(InitialUnderBarrelAttachmentClass),
 			Discard);
 	}
 	EvaluateTruePivot();

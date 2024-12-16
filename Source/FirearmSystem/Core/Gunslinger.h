@@ -33,19 +33,9 @@ public:
 	void FinishMoving(const FInputActionValue& Value);
 	UFUNCTION(BlueprintImplementableEvent)
 	void OnFinishMoving();
-
-	UFUNCTION()
-	void BeginPanning(const FInputActionValue& Value);
-	UFUNCTION(BlueprintImplementableEvent)
-	void OnBeginPanning();
 	
 	UFUNCTION()
 	void Pan(const FInputActionValue& Value);
-
-	UFUNCTION()
-	void FinishPanning(const FInputActionValue& Value);
-	UFUNCTION(BlueprintImplementableEvent)
-	void OnFinishPanning();
 
 	UFUNCTION()
 	void StartCrouch(const FInputActionValue& Value);

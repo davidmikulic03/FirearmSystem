@@ -35,11 +35,6 @@ void AGunslinger::Move(const FInputActionValue& Value) {
 
 void AGunslinger::FinishMoving(const FInputActionValue& Value) {
 	OnFinishMoving();
-	
-}
-
-void AGunslinger::BeginPanning(const FInputActionValue& Value) {
-	OnBeginPanning();
 }
 
 void AGunslinger::Pan(const FInputActionValue& Value) {
@@ -47,10 +42,6 @@ void AGunslinger::Pan(const FInputActionValue& Value) {
         
 	AddControllerPitchInput(-Input.Y);
 	AddControllerYawInput(Input.X);
-}
-
-void AGunslinger::FinishPanning(const FInputActionValue& Value) {
-	OnFinishPanning();
 }
 
 void AGunslinger::StartCrouch(const FInputActionValue& Value) {
@@ -104,9 +95,7 @@ void AGunslinger::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 	Input->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AGunslinger::Move);
 	Input->BindAction(MoveAction, ETriggerEvent::Completed, this, &AGunslinger::FinishMoving);
 
-	Input->BindAction(PanAction, ETriggerEvent::Started, this, &AGunslinger::BeginPanning);
 	Input->BindAction(PanAction, ETriggerEvent::Triggered, this, &AGunslinger::Pan);
-	Input->BindAction(PanAction, ETriggerEvent::Completed, this, &AGunslinger::FinishPanning);
 	
 	Input->BindAction(CrouchAction, ETriggerEvent::Started, this, &AGunslinger::StartCrouch);
 	Input->BindAction(CrouchAction, ETriggerEvent::Completed, this, &AGunslinger::StopCrouch);

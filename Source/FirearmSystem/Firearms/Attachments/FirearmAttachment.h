@@ -6,7 +6,7 @@
 #include "GameFramework/Actor.h"
 #include "FirearmAttachment.generated.h"
 
-UCLASS()
+UCLASS(Abstract)
 class FIREARMSYSTEM_API AFirearmAttachment : public AActor
 {
 	GENERATED_BODY()
