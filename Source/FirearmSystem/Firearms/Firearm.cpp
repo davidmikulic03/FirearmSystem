@@ -1,7 +1,6 @@
 ﻿#include "Firearm.h"
 
 #include "Bullet.h"
-#include "FirearmCoreData.h"
 #include "Attachments/BarrelAttachment.h"
 #include "Attachments/OpticAttachment.h"
 #include "Attachments/StockAttachment.h"
@@ -9,6 +8,8 @@
 #include "FirearmPivot.h"
 #include "WeightedBodyContactPoint.h"
 #include "FirearmSystem/Core/Gunslinger.h"
+#include "NiagaraSystem.h"
+#include "NiagaraFunctionLibrary.h"
 #include "Kismet/KismetMathLibrary.h"
 
 AFirearm::AFirearm() {
@@ -32,28 +33,32 @@ AFirearm::AFirearm() {
 
 bool AFirearm::TryFire() {
 	if(CanFire() && BulletsInChamber > 0) {
-		const FVector Location = GetBarrelExitLocation();
+		const FVector Location = GetBarrelExit()->GetComponentLocation();
 		const FRotator Rotation = GetActorRotation();
 		FActorSpawnParameters SpawnParameters = FActorSpawnParameters();
 		SpawnParameters.bNoFail = true;
 		SpawnParameters.Owner = this;
-		if(auto Bullet = GetWorld()->SpawnActor<ABullet>(FirearmData->BulletClass,
+		if(auto Bullet = GetWorld()->SpawnActor<ABullet>(BulletClass,
 			Location, Rotation, SpawnParameters))
 		{
-			float AverageErrorAngleInRadians = FMath::DegreesToRadians(FirearmData->Accuracy / 60);
+			float AverageErrorAngleInRadians = FMath::DegreesToRadians(Accuracy / 60);
 			if (BarrelAttachment)
 				BarrelAttachment->AccuracyModifier;
 			FVector Direction = Root->GetForwardVector();
 			
 			FQuat RandomRotation = FQuat::MakeFromRotationVector(AverageErrorAngleInRadians * UKismetMathLibrary::RandomUnitVector());
 			Direction = RandomRotation * Direction;
-			FVector BulletVelocity = FirearmData->BulletSpeed * Direction;
+			FVector BulletVelocity = BulletSpeed * Direction;
 			Bullet->Fire(this, BulletVelocity);
-			FireCounter = 1.f/FirearmData->FireFrequency;
+			FireCounter = 1.f/FireFrequency;
 			BulletsInChamber--;
 			FVector BulletMomentum = BulletVelocity * Bullet->Weight;
 			FVector Impulse = -BulletMomentum / GetWeight();
 			RegisterImpulse(Impulse);
+			if (auto s = GetMuzzleFlashSystem()) {
+				UNiagaraFunctionLibrary::SpawnSystemAttached(s, GetBarrelExit(), NAME_None,
+					FVector::ZeroVector, FRotator::ZeroRotator, EAttachLocation::KeepRelativeOffset, true);
+			}
 			return true;
 		}
 	}
@@ -61,7 +66,7 @@ bool AFirearm::TryFire() {
 }
 
 bool AFirearm::CanFire() {
-	if(FirearmData && FireCounter <= 0)
+	if(FireCounter <= 0)
 		return true;
 	return false;
 }
@@ -80,9 +85,9 @@ void AFirearm::RegisterHit(FHitResult Hit) {
 	}
 }
 
-FVector AFirearm::GetBarrelExitLocation() {
+USceneComponent* AFirearm::GetBarrelExit() {
 	if(!BarrelAttachment)
-		return BarrelExitPoint->GetComponentLocation();
+		return BarrelExitPoint;
 	else 
 		return BarrelAttachment->GetBarrelExitLocation();
 }
@@ -125,8 +130,9 @@ bool AFirearm::TryAttach(AActor* InActor) {
 		if (!Mesh)
 			return false;
 		Mesh->AttachToComponent(Root, Rules);
-		if(InActor->IsA(ABarrelAttachment::StaticClass())) {
-			InActor->SetActorLocation(BarrelExitPoint->GetComponentLocation());
+		if(auto a = Cast<ABarrelAttachment>(InActor)) {
+			FVector Offset = BarrelExitPoint->GetRelativeLocation() - a->AttachmentPoint->GetRelativeLocation();
+			InActor->SetActorLocation(BarrelExitPoint->GetComponentLocation() + Offset);
 			InActor->SetActorRotation(BarrelExitPoint->GetComponentRotation());
 		}
 		else if(InActor->IsA(AStockAttachment::StaticClass())) {
@@ -175,17 +181,19 @@ void AFirearm::RegisterImpulse(FVector Impulse) {
 	}
 }
 
+UNiagaraSystem* AFirearm::GetMuzzleFlashSystem() { return DefaultMuzzleFlash; }
+
 void AFirearm::BeginPlay() {
 	Super::BeginPlay();
 
-	UClass* BarrelClass = InitialBarrelAttachmentClass ? InitialBarrelAttachmentClass : FirearmData->DefaultBarrelClass;
+	UClass* BarrelClass = InitialBarrelAttachmentClass ? InitialBarrelAttachmentClass : DefaultBarrelClass;
 	if(BarrelClass) {
 		ABarrelAttachment* Discard = nullptr;
 		AttachBarrel(
 			GetWorld()->SpawnActor<ABarrelAttachment>(BarrelClass),
 			Discard);
 	}
-	UClass* StockClass = InitialStockAttachmentClass ? InitialStockAttachmentClass : FirearmData->DefaultStockClass;
+	UClass* StockClass = InitialStockAttachmentClass ? InitialStockAttachmentClass : DefaultStockClass;
 	if(StockClass) {
 		AStockAttachment* Discard = nullptr;
 		AttachStock(
@@ -208,7 +216,7 @@ void AFirearm::BeginPlay() {
 }
 
 float AFirearm::GetWeight() {
-	float Result = FirearmData->Weight;
+	float Result = Weight;
 	if (BarrelAttachment)
 		Result+=BarrelAttachment->GetWeight();
 	if (StockAttachment)

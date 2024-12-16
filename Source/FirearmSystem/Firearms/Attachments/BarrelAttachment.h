@@ -11,7 +11,7 @@ class FIREARMSYSTEM_API ABarrelAttachment : public AFirearmAttachment {
 public:
 	ABarrelAttachment();
 
-	FVector GetBarrelExitLocation();
+	USceneComponent* GetBarrelExitLocation();
 	float GetAccuracyModifier() {
 		float Result = AccuracyModifier;
 		if (bCanAttachFurther && BarrelAttachment)

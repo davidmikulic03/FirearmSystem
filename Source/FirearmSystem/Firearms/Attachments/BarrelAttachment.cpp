@@ -7,6 +7,6 @@ ABarrelAttachment::ABarrelAttachment() {
 	PrimaryActorTick.bCanEverTick = false;
 }
 
-FVector ABarrelAttachment::GetBarrelExitLocation() {
-	return BarrelExitPoint->GetComponentLocation();
+USceneComponent* ABarrelAttachment::GetBarrelExitLocation() {
+	return BarrelExitPoint;
 }

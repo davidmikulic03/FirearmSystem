@@ -28,8 +28,8 @@ void AGunslinger::BeginMoving(const FInputActionValue& Value) {
 void AGunslinger::Move(const FInputActionValue& Value) {
 	const FVector Input = FVector(Value.Get<FVector2d>(), 0.f);
 	const FRotator Rotation = Controller->GetControlRotation();
-	const FVector GlobalInput = Rotation.RotateVector(Input);
-	AddMovementInput(GlobalInput);
+	FVector GlobalInput = Rotation.RotateVector(Input);
+	AddMovementInput(GlobalInput.GetSafeNormal2D());
 
 }
 

@@ -26,7 +26,9 @@ public:
 	UPROPERTY(EditDefaultsOnly, meta=(Units="kg"))
 		float Weight = 0.07f;
 
-	float MaxLifetime = 30.f;
+	UPROPERTY(EditDefaultsOnly, meta=(Units="s"))
+		float MaxLifetime = 0;
+	
 	float LifetimeCounter = 0.f;
 
 	FVector Velocity = FVector::ZeroVector;

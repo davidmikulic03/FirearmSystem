@@ -5,7 +5,15 @@
 #include "Attachments/StockAttachment.h"
 #include "GameFramework/Actor.h"
 
+
 #include "Firearm.generated.h"
+
+UENUM()
+enum EFiringType : uint8 {
+	Automatic,
+	SemiAutomatic,
+	Manual
+};
 
 UCLASS(Abstract)
 class FIREARMSYSTEM_API AFirearm : public AActor {
@@ -21,13 +29,42 @@ public:
 
 	void RegisterHit(FHitResult Hit);
 
-	FVector GetBarrelExitLocation();
+	USceneComponent* GetBarrelExit();
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 		UStaticMeshComponent* Root;
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-		class UFirearmCoreData* FirearmData;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Firearm")
+		FText Name;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Firearm")
+		TEnumAsByte<EFiringType> FiringType = Manual;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Firearm", meta=(EditCondition="FiringType!=EFiringType::Manual", EditConditionHides))
+		bool bNeedsInitialCocking = false;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Firearm", meta=(Units="m/s"))
+		float BulletSpeed = 400;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Firearm", meta=(UIMin=0.f))
+		float Accuracy = 1.f;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Firearm", meta=(UIMin=0.f))
+		float FireFrequency = 2.f;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Firearm", meta=(UIMin=1))
+		int ChamberCapacity = 1;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Firearm", meta=(AllowAbstract="false"))
+		TSubclassOf<class ABarrelAttachment> DefaultBarrelClass;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Firearm", meta=(AllowAbstract="false"))
+		TSubclassOf<class AStockAttachment> DefaultStockClass;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Firearm", meta=(AllowAbstract="false"))
+		 class UNiagaraSystem* DefaultMuzzleFlash;
+	
+	UPROPERTY(EditDefaultsOnly, Category="Firearm", meta=(AllowAbstract="false"))
+		TSubclassOf<class ABullet> BulletClass;
+	
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Firearm", meta=(Units="kg", UIMin=0.f))
+		float Weight = 2.f;
+
+	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 		class UWeightedBodyContactPoint* Hand;
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly)
@@ -53,13 +90,13 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 		USceneComponent* UnderBarrelAttachmentPoint;
 
-	UPROPERTY(EditInstanceOnly)
+	UPROPERTY(EditInstanceOnly, Category="Firearm")
 		TSubclassOf<ABarrelAttachment> InitialBarrelAttachmentClass;
-	UPROPERTY(EditInstanceOnly)
+	UPROPERTY(EditInstanceOnly, Category="Firearm")
 		TSubclassOf<AStockAttachment> InitialStockAttachmentClass;
-	UPROPERTY(EditInstanceOnly)
+	UPROPERTY(EditInstanceOnly, Category="Firearm")
 		TSubclassOf<AOpticsAttachment> InitialOpticsAttachmentClass;
-	UPROPERTY(EditInstanceOnly)
+	UPROPERTY(EditInstanceOnly, Category="Firearm")
 		TSubclassOf<AUnderBarrelAttachment> InitialUnderBarrelAttachmentClass;
 	
 	UFUNCTION(BlueprintCallable)
@@ -86,6 +123,8 @@ protected:
 	void EvaluateTruePivot();
 
 	void RegisterImpulse(FVector Impulse);
+
+	UNiagaraSystem* GetMuzzleFlashSystem();
 protected:
 	virtual void BeginPlay() override;
 
