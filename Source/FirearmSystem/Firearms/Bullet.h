@@ -12,7 +12,7 @@ class FIREARMSYSTEM_API ABullet : public AActor
 public:
 	ABullet();
 
-	virtual void Fire(class AFirearmBase* ShotFrom, FVector InVelocity);
+	virtual void Fire(class AFirearm* ShotFrom, FVector InVelocity);
 
 	virtual void Move(float DeltaSeconds, AActor* OriginIgnore);
 
@@ -26,7 +26,9 @@ public:
 	UPROPERTY(EditDefaultsOnly, meta=(Units="kg"))
 		float Weight = 0.07f;
 
-	float MaxLifetime = 30.f;
+	UPROPERTY(EditDefaultsOnly, meta=(Units="s"))
+		float MaxLifetime = 0;
+	
 	float LifetimeCounter = 0.f;
 
 	FVector Velocity = FVector::ZeroVector;

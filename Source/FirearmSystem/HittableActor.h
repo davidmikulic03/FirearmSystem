@@ -23,4 +23,16 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 	virtual bool HandleImpact(class ABullet* Bullet, FHitResult Hit) override;
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnHit(class ABullet* Bullet, FHitResult Hit);
+
+	UPROPERTY(EditAnywhere)
+		bool bBounce = false;
+	UPROPERTY(EditAnywhere, meta = (EditCondition = bBounce, EditConditionHides, Units="rad"))
+		float MaxBounceAngle = 0;
+	UPROPERTY(EditAnywhere, meta = (EditCondition = bBounce, Units="m/s", EditConditionHides))
+		float MinSpeed = 100;
+	UPROPERTY(EditAnywhere, meta = (EditCondition = bBounce, EditConditionHides))
+		float BounceSpeedMultiplier = 0.9;
 };

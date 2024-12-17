@@ -3,7 +3,7 @@
 
 #include "Bullet.h"
 
-#include "FirearmBase.h"
+#include "Firearm.h"
 #include "Components/SphereComponent.h"
 #include "FirearmSystem/Hittable.h"
 #include "GameFramework/ProjectileMovementComponent.h"
@@ -21,11 +21,12 @@ ABullet::ABullet() {
 	PrimaryActorTick.bCanEverTick = true;
 }
 
-void ABullet::Fire(AFirearmBase* ShotFrom, FVector InVelocity) {
+void ABullet::Fire(AFirearm* ShotFrom, FVector InVelocity) {
 	SetOwner(ShotFrom);
 	Velocity = 100 * InVelocity;
 	if(GetOwner()) {
 		GetOwner()->GetAttachedActors(IgnoreActors);
+		IgnoreActors.Add(GetOwner()->GetAttachParentActor());
 		IgnoreActors.Add(GetOwner());
 		IgnoreActors.Add(this);
 	}
@@ -33,6 +34,7 @@ void ABullet::Fire(AFirearmBase* ShotFrom, FVector InVelocity) {
 
 void ABullet::Move(float DeltaSeconds, AActor* OriginIgnore)
 {
+	SetActorRotation(Velocity.Rotation(), ETeleportType::ResetPhysics);
 	FVector Acceleration = FVector::UpVector * GetWorld()->GetGravityZ();
 	FVector NewLocation = GetActorLocation() + Velocity * DeltaSeconds + 0.5 * Acceleration * DeltaSeconds * DeltaSeconds;
 	FHitResult Hit;
@@ -46,11 +48,12 @@ void ABullet::Move(float DeltaSeconds, AActor* OriginIgnore)
 		NewLocation,
 		Collision->GetUnscaledSphereRadius(),
 		UEngineTypes::ConvertToTraceType(ECC_GameTraceChannel1),
-		false, NewIgnore, EDrawDebugTrace::ForOneFrame, Hit,
+		false, NewIgnore, EDrawDebugTrace::None, Hit,
 		true, FLinearColor::Green, FLinearColor::Red,
 		0.1f);
 	if(bHit) {
 		float NewDeltaSeconds = DeltaSeconds * FVector::Distance(GetActorLocation(), NewLocation) / Velocity.Length();
+		SetActorLocation(Hit.Location);
 		HandleImpact(Hit, NewDeltaSeconds);
 	}
 	else
@@ -63,6 +66,8 @@ void ABullet::Move(float DeltaSeconds, AActor* OriginIgnore)
 
 void ABullet::Tick(float DeltaSeconds) {
 	Move(DeltaSeconds, nullptr);
+	if (MaxLifetime<=0)
+		return;
 	if(LifetimeCounter < MaxLifetime)
 		LifetimeCounter+=DeltaSeconds;
 	else Destroy();
@@ -72,8 +77,10 @@ void ABullet::HandleImpact(FHitResult Hit, float DeltaSeconds) {
 	if (auto a = Cast<IHittable>(Hit.GetActor())) {
 		if (a->HandleImpact(this, Hit))
 			Move(DeltaSeconds, Hit.GetActor());
+		else Destroy();
 	}
-	Destroy();
+	else
+		Destroy();
 	// Velocity = 0.2 * FMath::GetReflectionVector(Velocity, Hit.ImpactNormal);
 	// SetActorLocation(Hit.Location);
 	// if(auto f = Cast<AFirearmBase>(GetOwner()))

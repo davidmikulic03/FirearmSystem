@@ -25,7 +25,7 @@ public:
 	UFUNCTION(BlueprintCallable)
 	FORCEINLINE bool IsEmpty() const { return CurrentAmmunition<1; }
 	
-	virtual bool TryUse(class AFirearmBase* Originator) override;
+	virtual bool TryUse(class AFirearm* Originator) override;
 	
 
 protected:

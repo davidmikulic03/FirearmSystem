@@ -6,7 +6,7 @@
 #include "GameFramework/Actor.h"
 #include "FirearmAttachment.generated.h"
 
-UCLASS()
+UCLASS(Abstract)
 class FIREARMSYSTEM_API AFirearmAttachment : public AActor
 {
 	GENERATED_BODY()
@@ -26,5 +26,5 @@ public:
 		float Weight = 0;
 
 	UFUNCTION(BlueprintCallable)
-		virtual bool TryUse(class AFirearmBase* Originator) { return false; }
+		virtual bool TryUse(class AFirearm* Originator) { return false; }
 };
