@@ -14,8 +14,6 @@ UFirearmPivot::UFirearmPivot() {
 void UFirearmPivot::BeginPlay() {
 	Super::BeginPlay();
 	// Target = Cast<USceneComponent>(GetOwner()->AddComponentByClass(USceneComponent::StaticClass(), false, GetOwner()->GetTransform(), true));
-	ResistParams = BaseResistParams;
-	
 }
 
 void UFirearmPivot::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) {

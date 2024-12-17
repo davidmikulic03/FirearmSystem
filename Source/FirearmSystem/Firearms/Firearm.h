@@ -1,10 +1,9 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "ModularPiece.h"
 #include "WeightedBodyContactPoint.h"
 #include "Attachments/StockAttachment.h"
-#include "GameFramework/Actor.h"
-
 
 #include "Firearm.generated.h"
 
@@ -16,7 +15,7 @@ enum EFiringType : uint8 {
 };
 
 UCLASS(Abstract)
-class FIREARMSYSTEM_API AFirearm : public AActor {
+class FIREARMSYSTEM_API AFirearm : public AModularPiece {
 	GENERATED_BODY()
 
 public:
@@ -57,6 +56,9 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Firearm", meta=(AllowAbstract="false"))
 		 class UNiagaraSystem* DefaultMuzzleFlash;
 	
+	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category="Firearm", meta=(AllowAbstract="false"))
+		TArray<TSubclassOf<AFirearmAttachment>> InitialAttachments;
+	
 	UPROPERTY(EditDefaultsOnly, Category="Firearm", meta=(AllowAbstract="false"))
 		TSubclassOf<class ABullet> BulletClass;
 	
@@ -69,62 +71,19 @@ public:
 		class UWeightedBodyContactPoint* Hand;
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly)
 		class UWeightedBodyContactPoint* TruePivot;
-	
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly)
-		class ABarrelAttachment* BarrelAttachment;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 		USceneComponent* BarrelExitPoint;
-	
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly)
-		class AStockAttachment* StockAttachment;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-		USceneComponent* StockAttachmentPoint;
-	
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly)
-		class AOpticsAttachment* OpticsAttachment;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-		USceneComponent* OpticsAttachmentPoint;
-	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-		class AUnderBarrelAttachment* UnderBarrelAttachment;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-		USceneComponent* UnderBarrelAttachmentPoint;
-
-	UPROPERTY(EditInstanceOnly, Category="Firearm")
-		TSubclassOf<ABarrelAttachment> InitialBarrelAttachmentClass;
-	UPROPERTY(EditInstanceOnly, Category="Firearm")
-		TSubclassOf<AStockAttachment> InitialStockAttachmentClass;
-	UPROPERTY(EditInstanceOnly, Category="Firearm")
-		TSubclassOf<AOpticsAttachment> InitialOpticsAttachmentClass;
-	UPROPERTY(EditInstanceOnly, Category="Firearm")
-		TSubclassOf<AUnderBarrelAttachment> InitialUnderBarrelAttachmentClass;
-	
-	UFUNCTION(BlueprintCallable)
-		void AttachBarrel(ABarrelAttachment* InBarrel, ABarrelAttachment*& OutBarrel);
-	UFUNCTION(BlueprintCallable)
-		void AttachStock(AStockAttachment* InStock, AStockAttachment*& OutStock);
-	UFUNCTION(BlueprintCallable)
-		void AttachOptics(AOpticsAttachment* InOptics, AOpticsAttachment*& OutOptics);
-	UFUNCTION(BlueprintCallable)
-		void AttachUnderBarrel(AUnderBarrelAttachment* InUnderBarrel, AUnderBarrelAttachment*& OutUnderBarrel);
-
-	UFUNCTION(BlueprintCallable)
-	FORCEINLINE bool HasBarrelAttachment() const { return BarrelAttachment!=nullptr; }
-	UFUNCTION(BlueprintCallable)
-	FORCEINLINE bool HasStockAttachment() const { return StockAttachment!=nullptr; }
-	UFUNCTION(BlueprintCallable)
-	FORCEINLINE bool HasOpticsAttachment() const { return OpticsAttachment!=nullptr; }
 
 	virtual float GetWeight();
 protected:
-	bool TryAttach(AActor* InActor);
-	bool TryDetach(AActor* InActor);
 
 	void EvaluateTruePivot();
 
 	void RegisterImpulse(FVector Impulse);
 
 	UNiagaraSystem* GetMuzzleFlashSystem();
+
+	
 protected:
 	virtual void BeginPlay() override;
 
