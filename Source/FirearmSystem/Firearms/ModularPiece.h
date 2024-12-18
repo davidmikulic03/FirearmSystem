@@ -26,13 +26,19 @@ public:
 	UConnector* GetConnector(UConnectorType* Type) const;
 
 	bool TryAttach(AFirearmAttachment* InActor);
-	bool TryAttach(TSubclassOf<class AFirearmAttachment> InClass);
+	AFirearmAttachment* TryAttach(TSubclassOf<class AFirearmAttachment> InClass);
 	
 	bool TryDetach(AFirearmAttachment* InActor);
-	
+
+	virtual float GetWeight();
+
+	struct FRecoilResistParams GetResistParams() const;
 
 	UPROPERTY(VisibleInstanceOnly)
 		TArray<class AFirearmAttachment*> Attachments;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Attachment", meta=(Units="kg", UIMin=0.f))
+		float Weight = 0;
 };
 
 

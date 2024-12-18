@@ -1,6 +1,10 @@
 ﻿#include "ModularPiece.h"
+
+#include "RecoilResistParams.h"
 #include "Attachments/Connector.h"
 #include "Attachments/FirearmAttachment.h"
+#include "WeightedContactPoint.h"
+
 
 AModularPiece::AModularPiece() {
 	PrimaryActorTick.bCanEverTick = false;
@@ -41,9 +45,9 @@ bool AModularPiece::TryAttach(AFirearmAttachment* InActor) {
 			FAttachmentTransformRules Rules = FAttachmentTransformRules::KeepRelativeTransform;
 			Rules.bWeldSimulatedBodies = true;
 			InActor->AttachToComponent(c, Rules);
-			FVector Offset = c->GetRelativeLocation() - InActor->Connector->GetRelativeLocation();
-			InActor->SetActorLocation(c->GetComponentLocation() + Offset);
 			InActor->SetActorRotation(c->GetComponentRotation());
+			FVector Offset = c->GetComponentLocation() - InActor->Connector->GetComponentLocation();
+			InActor->AddActorWorldOffset(Offset);
 			Attachments.Add(InActor);
 			return true;
 		}
@@ -51,10 +55,10 @@ bool AModularPiece::TryAttach(AFirearmAttachment* InActor) {
 	return false;
 }
 
-bool AModularPiece::TryAttach(TSubclassOf<class AFirearmAttachment> InClass) {
+AFirearmAttachment* AModularPiece::TryAttach(TSubclassOf<class AFirearmAttachment> InClass) {
 	if (auto a = GetWorld()->SpawnActor<AFirearmAttachment>(InClass))
-		return TryAttach(a);
-	return false;
+		if (TryAttach(a)) return a;
+	return nullptr;
 }
 
 bool AModularPiece::TryDetach(AFirearmAttachment* InActor) {
@@ -64,4 +68,30 @@ bool AModularPiece::TryDetach(AFirearmAttachment* InActor) {
 		return true;
 	}
 	return false;
+}
+
+float AModularPiece::GetWeight() {
+	float Result = Weight;
+	for (auto Attachment : Attachments) {
+		if (Attachment) 
+			Result += Attachment->GetWeight();
+	}
+	return Result;
+}
+
+FRecoilResistParams AModularPiece::GetResistParams() const {
+	FRecoilResistParams Result;
+	TArray<UWeightedContactPoint*> ContactPoints;
+	GetComponents<UWeightedContactPoint*>(ContactPoints);
+	TArray<AActor*> AttachedActors;
+	GetAttachedActors(AttachedActors);
+	for (auto ContactPoint : ContactPoints) {
+		Result += ContactPoint->ResistParams;
+	}
+	for (auto Child : AttachedActors) {
+		if (auto f = Cast<AFirearmAttachment>(Child)) {
+			Result += f->GetResistParams();
+		}
+	}
+	return Result;
 }

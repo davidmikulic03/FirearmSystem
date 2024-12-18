@@ -4,21 +4,20 @@
 #include "Attachments/BarrelAttachment.h"
 #include "Attachments/StockAttachment.h"
 #include "FirearmPivot.h"
-#include "WeightedBodyContactPoint.h"
+#include "WeightedContactPoint.h"
 #include "NiagaraSystem.h"
 #include "NiagaraFunctionLibrary.h"
-#include "Attachments/Connector.h"
+#include "FirearmSystem/Core/Gunslinger.h"
 #include "Kismet/KismetMathLibrary.h"
 
 AFirearm::AFirearm() {
 	Root = CreateDefaultSubobject<UStaticMeshComponent>("Firearm");
 	RootComponent = Root;
-	Hand = CreateDefaultSubobject<UWeightedBodyContactPoint>("Pivot");
+	Hand = CreateDefaultSubobject<UWeightedContactPoint>("Pivot");
 	Hand->SetupAttachment(Root);
 
 	BarrelExitPoint = CreateDefaultSubobject<USceneComponent>("Barrel Attachment Point");
 	BarrelExitPoint->SetupAttachment(Root);
-
 
 	PrimaryActorTick.bCanEverTick = true;
 }
@@ -91,19 +90,22 @@ USceneComponent* AFirearm::GetBarrelExit() {
 		return BarrelAttachment->GetBarrelExitLocation();
 }
 
-void AFirearm::EvaluateTruePivot() {
-	if (!TruePivot) {
-		TruePivot = Cast<UWeightedBodyContactPoint>(AddComponentByClass(UWeightedBodyContactPoint::StaticClass(), false, GetTransform(), false));
+
+
+FVector AFirearm::GetHandOffset() const {
+	return Hand->GetComponentLocation() - GetActorLocation();
+}
+
+void AFirearm::ModifyPivot(FVector& Result, float InitialWeight) const {
+	FVector Offset = Hand->GetRelativeLocation() * Hand->LocationWeight;
+	float AddedWeight = Hand->LocationWeight;
+	if (auto a = Cast<AStockAttachment>(GetAttachment(AStockAttachment::StaticClass()))) {
+		AddedWeight += a->Pivot->LocationWeight;
+		Result += a->Pivot->GetRelativeLocation() * a->Pivot->LocationWeight;
 	}
-	float WeightSum = Hand->LocationWeight;
-	TruePivot->SetRelativeLocation(Hand->GetRelativeLocation() * Hand->LocationWeight);
-	TruePivot->ResistParams = Hand->ResistParams;
-	if (auto c = Cast<AStockAttachment>(GetAttachment(AStockAttachment::StaticClass()))) {
-		WeightSum += c->Pivot->LocationWeight;
-		TruePivot->ResistParams += c->Pivot->ResistParams;
-		TruePivot->AddRelativeLocation(c->Pivot->GetRelativeLocation() * c->Pivot->LocationWeight);
-	}
-	TruePivot->SetRelativeLocation(TruePivot->GetRelativeLocation() / WeightSum);
+	Result *= InitialWeight;
+	Result += Offset;
+	Result /= InitialWeight + AddedWeight;
 }
 
 void AFirearm::RegisterImpulse(FVector Impulse) {
@@ -114,22 +116,10 @@ void AFirearm::RegisterImpulse(FVector Impulse) {
 
 UNiagaraSystem* AFirearm::GetMuzzleFlashSystem() { return DefaultMuzzleFlash; }
 
-
 void AFirearm::BeginPlay() {
 	Super::BeginPlay();
 
 	for (auto InitialAttachment : InitialAttachments) {
 		TryAttach(InitialAttachment);
 	}
-	
-	EvaluateTruePivot();
-}
-
-float AFirearm::GetWeight() {
-	float Result = Weight;
-	for (auto Attachment : Attachments) {
-		if (Attachment) 
-			Weight += Attachment->GetWeight();
-	}
-	return Result;
 }

@@ -2,7 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "ModularPiece.h"
-#include "WeightedBodyContactPoint.h"
+#include "WeightedContactPoint.h"
 #include "Attachments/StockAttachment.h"
 
 #include "Firearm.generated.h"
@@ -29,6 +29,10 @@ public:
 	void RegisterHit(FHitResult Hit);
 
 	USceneComponent* GetBarrelExit();
+
+	
+	FVector GetHandOffset() const;
+	void ModifyPivot(FVector& Result, float InitialWeight) const;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 		UStaticMeshComponent* Root;
@@ -61,23 +65,13 @@ public:
 	
 	UPROPERTY(EditDefaultsOnly, Category="Firearm", meta=(AllowAbstract="false"))
 		TSubclassOf<class ABullet> BulletClass;
-	
-	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Firearm", meta=(Units="kg", UIMin=0.f))
-		float Weight = 2.f;
 
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-		class UWeightedBodyContactPoint* Hand;
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly)
-		class UWeightedBodyContactPoint* TruePivot;
+		class UWeightedContactPoint* Hand;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 		USceneComponent* BarrelExitPoint;
-
-	virtual float GetWeight();
 protected:
-
-	void EvaluateTruePivot();
 
 	void RegisterImpulse(FVector Impulse);
 

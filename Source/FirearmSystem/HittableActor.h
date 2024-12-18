@@ -27,12 +27,17 @@ public:
 	UFUNCTION(BlueprintImplementableEvent)
 	void OnHit(class ABullet* Bullet, FHitResult Hit);
 
-	UPROPERTY(EditAnywhere)
-		bool bBounce = false;
-	UPROPERTY(EditAnywhere, meta = (EditCondition = bBounce, EditConditionHides, Units="rad"))
-		float MaxBounceAngle = 0;
-	UPROPERTY(EditAnywhere, meta = (EditCondition = bBounce, Units="m/s", EditConditionHides))
-		float MinSpeed = 100;
-	UPROPERTY(EditAnywhere, meta = (EditCondition = bBounce, EditConditionHides))
-		float BounceSpeedMultiplier = 0.9;
+	UPROPERTY(EditAnywhere, meta = (Units="m/s"))
+		float MaxIncomingVelocity = 0;
+	UPROPERTY(EditAnywhere, meta = (UIMin = 0.f, UIMax = 1.f))
+		float RicochetShallowProbability = 0.f;
+	UPROPERTY(EditAnywhere, meta = (UIMin = 0.f, UIMax = 1.f))
+		float RicochetDeepProbability = 0.f;
+	
+	UPROPERTY(EditAnywhere, meta = (UIMin = 0.f, UIMax = 1.f))
+		float RicochetElasticity = 0.5f;
+	UPROPERTY(EditAnywhere, meta = (Units="rad"))
+		float RicochetShallowRandomness = HALF_PI/9;
+	UPROPERTY(EditAnywhere, meta = (Units="rad"))
+		float RicochetDeepRandomness = HALF_PI/3;
 };

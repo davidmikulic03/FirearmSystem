@@ -16,9 +16,6 @@ class FIREARMSYSTEM_API UFirearmPivot : public USceneComponent
 
 public:
 	UFirearmPivot();
-
-	UPROPERTY(EditDefaultsOnly)
-		FRecoilResistParams BaseResistParams;
 	FRecoilResistParams ResistParams;
 	
 protected:
@@ -35,11 +32,16 @@ public:
 
 	void AddImpulse(FVector Impulse, bool bRandomize = false);
 	
+	void SetOwner(class AGunslinger* InOwner) { Gunslinger = InOwner; }
+	
 	UPROPERTY()
 		USceneComponent* Target;
 	UPROPERTY(EditInstanceOnly)
 		class AFirearm* Firearm;
 	
+	class AGunslinger* Gunslinger;
+	
+	FVector CenterOfMass = FVector::ZeroVector;
 protected:
 	void UpdateState(float DeltaSeconds);
 	void Resist(float DeltaSeconds);
