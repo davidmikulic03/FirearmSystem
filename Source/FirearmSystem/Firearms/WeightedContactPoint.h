@@ -5,16 +5,16 @@
 #include "CoreMinimal.h"
 #include "RecoilResistParams.h"
 #include "Components/SceneComponent.h"
-#include "WeightedBodyContactPoint.generated.h"
+#include "WeightedContactPoint.generated.h"
 
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
-class FIREARMSYSTEM_API UWeightedBodyContactPoint : public USceneComponent
+class FIREARMSYSTEM_API UWeightedContactPoint : public USceneComponent
 {
 	GENERATED_BODY()
 
 public:
-	UWeightedBodyContactPoint();
+	UWeightedContactPoint();
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Firearm", meta=(UIMin=0.f))
 		float LocationWeight = 1.f;

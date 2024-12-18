@@ -3,14 +3,17 @@
 
 #include "FirearmAttachment.h"
 
+#include "Connector.h"
+#include "Components/ArrowComponent.h"
+
 
 // Sets default values
 AFirearmAttachment::AFirearmAttachment() {
 
 	Mesh = CreateDefaultSubobject<UStaticMeshComponent>("Mesh");
 	RootComponent = Mesh;
-	AttachmentPoint = CreateDefaultSubobject<USceneComponent>("Attachment Point");
-	AttachmentPoint->SetupAttachment(Mesh);
+	Connector = CreateDefaultSubobject<UConnector>("Connector");
+	Connector->SetupAttachment(Mesh);
 	
 	PrimaryActorTick.bCanEverTick = false;
 }

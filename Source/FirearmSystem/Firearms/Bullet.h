@@ -25,7 +25,8 @@ public:
 		class UStaticMeshComponent* Mesh;
 	UPROPERTY(EditDefaultsOnly, meta=(Units="kg"))
 		float Weight = 0.07f;
-
+	UPROPERTY(EditDefaultsOnly, meta=(UIMin=0.f, UIMax=1.f))
+		float Elasticity = 0.5f;
 	UPROPERTY(EditDefaultsOnly, meta=(Units="s"))
 		float MaxLifetime = 0;
 	

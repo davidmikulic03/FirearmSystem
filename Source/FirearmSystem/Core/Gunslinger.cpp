@@ -1,6 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "Gunslinger.h"
 
 #include "Camera/CameraComponent.h"
@@ -8,6 +5,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "EnhancedInputComponent.h"
 #include "FirearmSystem/Firearms/FirearmPivot.h"
+#include "FirearmSystem/Firearms/WeightedContactPoint.h"
 #include "Kismet/GameplayStatics.h"
 
 
@@ -15,8 +13,10 @@ AGunslinger::AGunslinger() {
 	Camera = CreateDefaultSubobject<UCameraComponent>("Camera");
 	Camera->SetupAttachment(RootComponent);
 	Camera->bUsePawnControlRotation = true;
-	FirearmPivot = CreateDefaultSubobject<UFirearmPivot>("Firearm Pivot");
+	FirearmPivot = CreateDefaultSubobject<UWeightedContactPoint>("Firearm Pivot");
 	FirearmPivot->SetupAttachment(Camera);
+	TruePivot = CreateDefaultSubobject<UFirearmPivot>("True Pivot");
+	TruePivot->SetupAttachment(FirearmPivot);
 	
 	PrimaryActorTick.bCanEverTick = true;
 }
@@ -53,7 +53,7 @@ void AGunslinger::StopCrouch(const FInputActionValue& Value) {
 }
 
 void AGunslinger::SingleFire(const FInputActionValue& Value) {
-	FirearmPivot->TryFire();
+	TruePivot->TryFire();
 }
 
 void AGunslinger::StartFiring(const FInputActionValue& Value) {
@@ -67,10 +67,19 @@ void AGunslinger::StopFiring(const FInputActionValue& Value) {
 void AGunslinger::BeginPlay()
 {
 	Super::BeginPlay();
-
+	TruePivot->SetOwner(this);
 	if (auto f = Cast<AFirearm>(UGameplayStatics::GetActorOfClass(GetWorld(), AFirearm::StaticClass()))) {
-		FirearmPivot->Equip(f);
-		SumResistParams(f->TruePivot->ResistParams);
+		TruePivot->Equip(f);
+		EvaluateTruePivot();
+	}
+}
+
+void AGunslinger::EvaluateTruePivot() {
+	checkf(FirearmPivot, TEXT("Firearm Pivot not properly initialized."))
+	TruePivot->ResistParams = FirearmPivot->ResistParams;
+	if (auto f = TruePivot->Firearm) {
+		TruePivot->ResistParams = FRecoilResistParams::SoftNormalizedSum(TruePivot->ResistParams , f->GetResistParams());
+		// f->ModifyPivot(TruePivot->CenterOfMass, FirearmPivot->LocationWeight);
 	}
 }
 
@@ -78,7 +87,7 @@ void AGunslinger::Tick(float DeltaTime) {
 	Super::Tick(DeltaTime);
 
 	if (bIsFiring)
-		FirearmPivot->TryFire();
+		TruePivot->TryFire();
 }
 
 void AGunslinger::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -107,21 +116,4 @@ void AGunslinger::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 	Input->BindAction(AutomaticFireAction, ETriggerEvent::Completed, this, &AGunslinger::StopFiring);
 }
 
-void AGunslinger::SumResistParams(struct FRecoilResistParams Other) {
-	
-	if(Other.RecoilRandomness >= 0) FirearmPivot->ResistParams.RecoilRandomness = FirearmPivot->ResistParams.RecoilRandomness + Other.RecoilRandomness;
-	else FirearmPivot->ResistParams.RecoilRandomness = FirearmPivot->ResistParams.RecoilRandomness * FMath::Exp(Other.RecoilRandomness / FirearmPivot->ResistParams.RecoilRandomness);
-        
-	if(Other.LinearProportional >= 0) FirearmPivot->ResistParams.LinearProportional = FirearmPivot->ResistParams.LinearProportional + Other.LinearProportional;
-	else FirearmPivot->ResistParams.LinearProportional = FirearmPivot->ResistParams.LinearProportional * FMath::Exp(Other.LinearProportional / FirearmPivot->ResistParams.LinearProportional);
-        
-	if(Other.LinearDerivative >= 0) FirearmPivot->ResistParams.LinearDerivative = FirearmPivot->ResistParams.LinearDerivative + Other.LinearDerivative;
-	else FirearmPivot->ResistParams.LinearDerivative = FirearmPivot->ResistParams.LinearDerivative * FMath::Exp(Other.LinearDerivative / FirearmPivot->ResistParams.LinearDerivative);
-
-	if(Other.AngularProportional >= 0) FirearmPivot->ResistParams.AngularProportional = FirearmPivot->ResistParams.AngularProportional + Other.AngularProportional;
-	else FirearmPivot->ResistParams.AngularProportional = FirearmPivot->ResistParams.AngularProportional * FMath::Exp(Other.AngularProportional / FirearmPivot->ResistParams.AngularProportional);
-        
-	if(Other.AngularDerivative >= 0) FirearmPivot->ResistParams.AngularDerivative = FirearmPivot->ResistParams.AngularDerivative + Other.AngularDerivative;
-	else FirearmPivot->ResistParams.AngularDerivative = FirearmPivot->ResistParams.AngularDerivative * FMath::Exp(Other.AngularDerivative / FirearmPivot->ResistParams.AngularDerivative);
-}
 

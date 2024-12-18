@@ -12,5 +12,5 @@ public:
 	AStockAttachment();
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-		class UWeightedBodyContactPoint* Pivot;
+		class UWeightedContactPoint* Pivot;
 };

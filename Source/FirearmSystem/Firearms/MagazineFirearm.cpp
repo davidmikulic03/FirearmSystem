@@ -38,8 +38,7 @@ void AMagazineFirearm::ReplaceMagazine() {
 			Magazine->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
 			Magazine->Mesh->SetSimulatePhysics(true);
 		}
-		Magazine = GetWorld()->SpawnActor<AMagazine>(MagazineClass);
-		TryAttach(Magazine);
+		Magazine = Cast<AMagazine>(TryAttach(MagazineClass));
 	}	
 }
 

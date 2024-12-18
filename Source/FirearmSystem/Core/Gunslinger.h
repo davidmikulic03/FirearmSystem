@@ -19,7 +19,7 @@ class FIREARMSYSTEM_API AGunslinger : public ACharacter
 public:
 	AGunslinger();
 
-	class UFirearmPivot* GetFirearmPivot() const { return FirearmPivot; }
+	class UFirearmPivot* GetTruePivot() const { return TruePivot; }
 	
 	UFUNCTION()
 		void BeginMoving(const FInputActionValue& Value);
@@ -52,6 +52,8 @@ public:
 protected:
 	virtual void BeginPlay() override;
 
+	void EvaluateTruePivot();
+	
 public:
 	virtual void Tick(float DeltaTime) override;
 
@@ -79,8 +81,8 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Camera", meta=(AllowPrivateAccess="true"))
 		class UCameraComponent* Camera;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Firearm", meta=(AllowPrivateAccess="true"))
-		class UFirearmPivot* FirearmPivot;
-
-protected:
-	void SumResistParams(struct FRecoilResistParams Other);
+		class UWeightedContactPoint* FirearmPivot;
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly)
+		class UFirearmPivot* TruePivot;
+	
 };
