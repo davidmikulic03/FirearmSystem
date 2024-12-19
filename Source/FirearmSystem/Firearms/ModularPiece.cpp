@@ -95,3 +95,18 @@ FRecoilResistParams AModularPiece::GetResistParams() const {
 	}
 	return Result;
 }
+
+void AModularPiece::GetWeightedPivotLocation(FVector& OutLocation, float& OutWeight) const {
+	TArray<UWeightedContactPoint*> ContactPoints;
+	GetComponents<UWeightedContactPoint*>(ContactPoints);
+	for (auto ContactPoint : ContactPoints) {
+		OutLocation += ContactPoint->GetComponentLocation() * ContactPoint->LocationWeight;
+		OutWeight += ContactPoint->LocationWeight;
+	}
+	TArray<AActor*> AttachedActors;
+	GetAttachedActors(AttachedActors);
+	for (auto Child : AttachedActors) {
+		if (auto f = Cast<AFirearmAttachment>(Child))
+			f->GetWeightedPivotLocation(OutLocation, OutWeight);
+	}
+}

@@ -20,6 +20,8 @@ public:
 	AGunslinger();
 
 	class UFirearmPivot* GetTruePivot() const { return TruePivot; }
+	class UCameraComponent* GetCamera() const { return Camera; }
+	FVector GetGunTargetDirection() const;
 	
 	UFUNCTION()
 		void BeginMoving(const FInputActionValue& Value);
@@ -53,6 +55,7 @@ protected:
 	virtual void BeginPlay() override;
 
 	void EvaluateTruePivot();
+
 	
 public:
 	virtual void Tick(float DeltaTime) override;
@@ -82,6 +85,8 @@ protected:
 		class UCameraComponent* Camera;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Firearm", meta=(AllowPrivateAccess="true"))
 		class UWeightedContactPoint* FirearmPivot;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Firearm", meta=(AllowPrivateAccess="true"))
+		float StandardTargetDistance = 10000.f;
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly)
 		class UFirearmPivot* TruePivot;
 	

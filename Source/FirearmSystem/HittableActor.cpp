@@ -32,7 +32,7 @@ bool AHittableActor::HandleImpact(class ABullet* Bullet, FHitResult Hit) {
 	if (bRicochet) 
 		return Ricochet(Bullet, Hit, RelativeSpeed, Reflectance);
 	else
-		return Penetrate(Bullet, Hit, RelativeSpeed);
+		return Penetrate(Bullet, Hit);
 }
 
 bool AHittableActor::Ricochet(class ABullet* Bullet, FHitResult Hit, float IncomingSpeed, float Reflectance) {
@@ -40,21 +40,29 @@ bool AHittableActor::Ricochet(class ABullet* Bullet, FHitResult Hit, float Incom
 		float GaussianRadius = sqrt(-2*log(FMath::FRand()));
 		float StandardDeviation = FMath::Lerp(DeepRandomRicochetAngleStandardDeviation, ShallowRandomRicochetAngleStandardDeviation, Reflectance);
 		float RandomAngle = GaussianRadius * StandardDeviation;
-		FQuat Rotation = FQuat::MakeFromRotationVector(RandomAngle * UKismetMathLibrary::RandomUnitVector());
+		FVector RotationVector = RandomAngle * UKismetMathLibrary::RandomUnitVector();
+		FVector RotationIntoGround = FVector::VectorPlaneProject(RotationVector, Hit.ImpactNormal);
+		float AngleTowardGround = RotationIntoGround.Length();
+		float CurrentAngle = asin(-Bullet->Velocity.GetSafeNormal() | Hit.ImpactNormal);
+		if (AngleTowardGround > CurrentAngle)
+			RotationVector -= 2 * RotationIntoGround;
+		FQuat Rotation = FQuat::MakeFromRotationVector(RotationVector);
 		
 		FVector VelocityImpulse = IncomingSpeed * Hit.ImpactNormal;
 		Bullet->Velocity -= 2 * VelocityImpulse;
 		Bullet->Velocity = Rotation * Bullet->Velocity;
 		Bullet->Velocity *= RicochetElasticity * Bullet->Elasticity;
 	}
-	
-	OnHit(Bullet, Hit);
-	if ((Bullet->Velocity | Hit.ImpactNormal) > 0) return true;
-	else return false;
+	if ((Bullet->Velocity | Hit.ImpactNormal) > 0) {
+		OnRicochet(Bullet, Hit.ImpactPoint, Hit.ImpactNormal);
+		return true;
+	}
+	else 
+		return Penetrate(Bullet, Hit);
 }
 
-bool AHittableActor::Penetrate(class ABullet* Bullet, FHitResult Hit, float IncomingSpeed) {
-	OnHit(Bullet, Hit);
+bool AHittableActor::Penetrate(class ABullet* Bullet, FHitResult Hit) {
+	OnPenetrate(Bullet, Hit.ImpactPoint, Hit.ImpactNormal);
 	return false;
 }
 

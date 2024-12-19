@@ -33,6 +33,7 @@ public:
 	virtual float GetWeight();
 
 	struct FRecoilResistParams GetResistParams() const;
+	void GetWeightedPivotLocation(FVector& OutLocation, float& OutWeight) const;
 
 	UPROPERTY(VisibleInstanceOnly)
 		TArray<class AFirearmAttachment*> Attachments;

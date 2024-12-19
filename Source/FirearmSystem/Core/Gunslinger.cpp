@@ -57,10 +57,12 @@ void AGunslinger::SingleFire(const FInputActionValue& Value) {
 }
 
 void AGunslinger::StartFiring(const FInputActionValue& Value) {
+	TruePivot->SetIsIdle(false);
 	bIsFiring = true;
 }
 
 void AGunslinger::StopFiring(const FInputActionValue& Value) {
+	TruePivot->SetIsIdle(true);
 	bIsFiring = false;
 }
 
@@ -81,6 +83,45 @@ void AGunslinger::EvaluateTruePivot() {
 		TruePivot->ResistParams = FRecoilResistParams::SoftNormalizedSum(TruePivot->ResistParams , f->GetResistParams());
 		// f->ModifyPivot(TruePivot->CenterOfMass, FirearmPivot->LocationWeight);
 	}
+}
+
+FVector AGunslinger::GetGunTargetDirection() const {
+	if (!TruePivot->Firearm)
+		return Camera->GetForwardVector();
+	FVector Start =  Camera->GetComponentLocation();
+	FVector End = Camera->GetComponentLocation() + Camera->GetForwardVector() * StandardTargetDistance;
+	FHitResult Hit;
+	TArray<AActor*> Ignore;
+	Ignore.Init(TruePivot->Firearm->GetBarrelExit()->GetOwner(), 1);
+	bool bHit = UKismetSystemLibrary::LineTraceSingle(
+		GetWorld(),
+		Start,
+		End,
+		UEngineTypes::ConvertToTraceType(ECC_GameTraceChannel1),
+		false,
+		Ignore, EDrawDebugTrace::None, Hit, true);
+
+	FVector BarrelLocation = TruePivot->Firearm->GetBarrelExit()->GetComponentLocation();
+	FVector Displacement = (Hit.Location - BarrelLocation);
+	if (bHit) {
+		FVector Direction = Displacement.GetSafeNormal();
+		float Dot = Direction | Camera->GetForwardVector();
+		if (Dot > 0)
+			return Direction;
+		// else {
+		// 	FVector Sideways = Camera->GetRightVector();
+		// 	FVector BarrelOffset = BarrelLocation - Camera->GetComponentLocation();
+		// 	if ((Hit.Normal | Camera->GetForwardVector()) < 0 && (BarrelOffset | Hit.Normal) < 0)
+		// 		Sideways = -Sideways;
+		// 	FVector AlongNormal = (Sideways.ProjectOnToNormal(Hit.Normal));
+		// 	FVector AlongWall = (Sideways-AlongNormal).GetSafeNormal();
+		// 	
+		// 	// if ((AlongWall | Direction) < 0)
+		// 	// 	AlongWall = -AlongWall;
+		// 	return AlongWall;
+		// }
+	}
+	return Camera->GetForwardVector().GetSafeNormal();
 }
 
 void AGunslinger::Tick(float DeltaTime) {

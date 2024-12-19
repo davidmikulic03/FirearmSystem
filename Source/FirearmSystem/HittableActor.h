@@ -24,10 +24,12 @@ public:
 
 	virtual bool HandleImpact(class ABullet* Bullet, FHitResult Hit) override;
 	bool Ricochet(class ABullet* Bullet, FHitResult Hit, float IncomingSpeed, float Reflectance);
-	bool Penetrate(class ABullet* Bullet, FHitResult Hit, float IncomingSpeed);
+	bool Penetrate(class ABullet* Bullet, FHitResult Hit);
 
 	UFUNCTION(BlueprintImplementableEvent)
-	void OnHit(class ABullet* Bullet, FHitResult Hit);
+	void OnPenetrate(class ABullet* Bullet, FVector Location, FVector Normal);
+	UFUNCTION(BlueprintImplementableEvent)
+	void OnRicochet(class ABullet* Bullet, FVector Location, FVector Normal);
 
 	UPROPERTY(EditAnywhere, meta = (UIMin = 0.f, Units="rad", ToolTip="The angle at which the probability is 1/2"))
 		float RicochetThreshold = HALF_PI;

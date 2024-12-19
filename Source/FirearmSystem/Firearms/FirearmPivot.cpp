@@ -22,6 +22,7 @@ void UFirearmPivot::TickComponent(float DeltaTime, ELevelTick TickType, FActorCo
 	// ClampVelocities();
 	UpdateState(DeltaTime);
 	Resist(DeltaTime);
+	// IntegralAngularError *= exp(-DeltaTime/IntegralTermFalloffSpeed);
 }
 
 bool UFirearmPivot::TryFire() {
@@ -68,9 +69,15 @@ void UFirearmPivot::UpdateState(float DeltaSeconds) {
 	FTransform ToWorld = GetComponentTransform();
 	FQuat DeltaRotation = FQuat::MakeFromRotationVector(ToWorld.TransformVectorNoScale(AngularVelocity * DeltaSeconds));
 	// FVector Initial = Firearm->Hand->GetComponentLocation();
+	FVector WeightedPivot = FVector::ZeroVector;
+	float PivotWeight = 0.f;
+	Firearm->GetWeightedPivotLocation(WeightedPivot, PivotWeight);
+	FVector PivotLocation = WeightedPivot / PivotWeight;
+	FVector ToPivot = PivotLocation - GetComponentLocation();
 	// FVector WorldCOM = ToWorld.TransformVectorNoScale(CenterOfMass);
-	// Firearm->Root->AddWorldOffset(WorldCOM, false, nullptr, ETeleportType::TeleportPhysics);
+	Firearm->Root->AddWorldOffset(-ToPivot, false, nullptr, ETeleportType::TeleportPhysics);
 	Firearm->Root->AddWorldRotation(DeltaRotation, false, nullptr, ETeleportType::TeleportPhysics);
+	Firearm->Root->AddWorldOffset(ToPivot, false, nullptr, ETeleportType::TeleportPhysics);
 	// Firearm->Root->AddWorldOffset(-WorldCOM, false, nullptr, ETeleportType::TeleportPhysics);
 	
 	Firearm->Root->AddWorldOffset(LinearVelocity * DeltaSeconds, false, nullptr, ETeleportType::TeleportPhysics);
@@ -83,7 +90,12 @@ void UFirearmPivot::Resist(float DeltaSeconds) {
 }
 
 void UFirearmPivot::ResistLinear(float DeltaSeconds) {
-	FVector DeltaPosition = GetComponentLocation() - Firearm->Hand->GetComponentLocation();
+	FVector WeightedPivot = FVector::ZeroVector;
+	float PivotWeight = 0.f;
+	Firearm->GetWeightedPivotLocation(WeightedPivot, PivotWeight);
+	FVector PivotLocation = WeightedPivot / PivotWeight;
+	DrawDebugBox(GetWorld(), PivotLocation, FVector::OneVector * 5.f, FColor::Green);
+	FVector DeltaPosition = GetComponentLocation() - PivotLocation;
 	FVector DeltaVelocity = -LinearVelocity;
 	FVector Acceleration = (ResistParams.LinearProportional * DeltaPosition + ResistParams.LinearDerivative * DeltaVelocity) / Firearm->GetWeight();
 	LinearVelocity += Acceleration * DeltaSeconds;
@@ -91,12 +103,24 @@ void UFirearmPivot::ResistLinear(float DeltaSeconds) {
 
 void UFirearmPivot::ResistAngular(float DeltaSeconds) {
 	FTransform ToWorld = GetComponentTransform();
-	FQuat DeltaRotation = GetComponentRotation().Quaternion().Inverse() * Firearm->GetActorRotation().Quaternion();
+	FQuat PivotCorrection = FQuat::FindBetweenNormals(GetForwardVector(), GunSlinger->GetGunTargetDirection());
+	FQuat DeltaRotation = (PivotCorrection * GetComponentRotation().Quaternion()).Inverse() * Firearm->GetActorRotation().Quaternion();
+	
 	FVector AsRotationVector = DeltaRotation.ToRotationVector();
+	if (AsRotationVector.X > PI) AsRotationVector.X = PI - AsRotationVector.X;
+	if (AsRotationVector.Y > PI) AsRotationVector.Y = PI - AsRotationVector.Y;
+	if (AsRotationVector.Z > PI) AsRotationVector.Z = PI - AsRotationVector.Z;
+	
+	if (!bIsIdle) {
+		IntegralAngularError *= exp(-DeltaSeconds/ResistParams.IntegralTermFalloffTime);
+		IntegralAngularError += AsRotationVector * DeltaSeconds;
+	}
+	
 	FVector P = -ResistParams.AngularProportional * AsRotationVector;
+	FVector I = -ResistParams.AngularIntegral * IntegralAngularError;
 	FVector D = -ResistParams.AngularDerivative * AngularVelocity;
 	float Weight = Firearm->GetWeight();
-	FVector Torque = (P + D) / Weight;
+	FVector Torque = (P+I+D) / Weight;
 	AngularVelocity += /*ToWorld.InverseTransformVectorNoScale*/(Torque) * DeltaSeconds;
 	// FVector Torque = -Firearm->GetWeight() * (AngularProportional * AsRotationVector + AngularDerivative * ToWorld.TransformVectorNoScale(AngularVelocity));
 	// AngularVelocity += ToWorld.InverseTransformVectorNoScale(Torque * DeltaSeconds);

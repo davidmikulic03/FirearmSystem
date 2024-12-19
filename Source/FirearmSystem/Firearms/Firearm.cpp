@@ -7,6 +7,7 @@
 #include "WeightedContactPoint.h"
 #include "NiagaraSystem.h"
 #include "NiagaraFunctionLibrary.h"
+#include "Camera/CameraComponent.h"
 #include "FirearmSystem/Core/Gunslinger.h"
 #include "Kismet/KismetMathLibrary.h"
 
@@ -36,6 +37,7 @@ bool AFirearm::TryFire() {
 			// if (auto c = GetAttachment<ABarrelAttachment>())
 			// 	Accuracy *= c->AccuracyModifier;
 			FVector Direction = Root->GetForwardVector();
+			
 			
 			FQuat RandomRotation = FQuat::MakeFromRotationVector(AverageErrorAngleInRadians * UKismetMathLibrary::RandomUnitVector());
 			Direction = RandomRotation * Direction;

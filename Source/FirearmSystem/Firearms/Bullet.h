@@ -16,6 +16,8 @@ public:
 
 	virtual void Move(float DeltaSeconds, AActor* OriginIgnore);
 
+	void EvaluateTrail(float DeltaSeconds);
+
 public:
 	virtual void Tick(float DeltaSeconds) override;
 
@@ -29,11 +31,21 @@ public:
 		float Elasticity = 0.5f;
 	UPROPERTY(EditDefaultsOnly, meta=(Units="s"))
 		float MaxLifetime = 0;
+	UPROPERTY(EditDefaultsOnly, meta=(Units="s"))
+		float TrailTime = 0.05f;
+	UPROPERTY(EditDefaultsOnly, meta=(UIMin=0, UIMax=10.f, EditCondition="TrailTime>0", EditConditionHides))
+		int MaxTrailMeshes = 1;
+	UPROPERTY(EditDefaultsOnly, meta=(EditCondition="TrailTime>0", EditConditionHides))
+		UStaticMesh* TrailMesh;
 	
 	float LifetimeCounter = 0.f;
 
-	FVector Velocity = FVector::ZeroVector;
+	UPROPERTY(BlueprintReadOnly)
+		FVector Velocity = FVector::ZeroVector;
 
+	UPROPERTY()
+		TArray<class USplineMeshComponent*> Trail;
+	
 protected:
 	void HandleImpact(FHitResult Hit, float DeltaSeconds);
 

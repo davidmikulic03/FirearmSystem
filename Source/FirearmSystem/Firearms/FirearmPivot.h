@@ -32,14 +32,20 @@ public:
 
 	void AddImpulse(FVector Impulse, bool bRandomize = false);
 	
-	void SetOwner(class AGunslinger* InOwner) { Gunslinger = InOwner; }
+	void SetOwner(class AGunslinger* InOwner) { GunSlinger = InOwner; }
+
+	void SetIsIdle(bool Value) {
+		bIsIdle = Value;
+		if (Value==true)
+			IntegralAngularError=FVector::ZeroVector;
+	}
 	
 	UPROPERTY()
 		USceneComponent* Target;
 	UPROPERTY(EditInstanceOnly)
 		class AFirearm* Firearm;
 	
-	class AGunslinger* Gunslinger;
+	class AGunslinger* GunSlinger;
 	
 	FVector CenterOfMass = FVector::ZeroVector;
 protected:
@@ -50,4 +56,8 @@ protected:
 	
 	FVector LinearVelocity = FVector::ZeroVector;
 	FVector AngularVelocity = FVector::ZeroVector;
+
+	FVector IntegralAngularError = FVector::ZeroVector;
+
+	bool bIsIdle = true;
 };
