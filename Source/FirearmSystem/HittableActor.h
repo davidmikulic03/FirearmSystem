@@ -23,21 +23,24 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 	virtual bool HandleImpact(class ABullet* Bullet, FHitResult Hit) override;
+	bool Ricochet(class ABullet* Bullet, FHitResult Hit, float IncomingSpeed, float Reflectance);
+	bool Penetrate(class ABullet* Bullet, FHitResult Hit, float IncomingSpeed);
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void OnHit(class ABullet* Bullet, FHitResult Hit);
 
-	UPROPERTY(EditAnywhere, meta = (Units="m/s"))
-		float MaxIncomingVelocity = 0;
-	UPROPERTY(EditAnywhere, meta = (UIMin = 0.f, UIMax = 1.f))
-		float RicochetShallowProbability = 0.f;
-	UPROPERTY(EditAnywhere, meta = (UIMin = 0.f, UIMax = 1.f))
-		float RicochetDeepProbability = 0.f;
+	UPROPERTY(EditAnywhere, meta = (UIMin = 0.f, Units="rad", ToolTip="The angle at which the probability is 1/2"))
+		float RicochetThreshold = HALF_PI;
+	UPROPERTY(EditAnywhere, meta = (UIMin = 0.f))
+		float RicochetThresholdSharpness = INFINITY;
+	UPROPERTY(EditAnywhere, meta = (UIMin = 0.f, Units="rad"))
+		float ShallowRandomRicochetAngleStandardDeviation = HALF_PI/18;
+	UPROPERTY(EditAnywhere, meta = (UIMin = 0.f, Units="rad"))
+		float DeepRandomRicochetAngleStandardDeviation = HALF_PI/9;
 	
 	UPROPERTY(EditAnywhere, meta = (UIMin = 0.f, UIMax = 1.f))
 		float RicochetElasticity = 0.5f;
-	UPROPERTY(EditAnywhere, meta = (Units="rad"))
-		float RicochetShallowRandomness = HALF_PI/9;
-	UPROPERTY(EditAnywhere, meta = (Units="rad"))
-		float RicochetDeepRandomness = HALF_PI/3;
+
+protected:
+	virtual float GetReflectance(FVector Incoming, FVector Normal) const;
 };

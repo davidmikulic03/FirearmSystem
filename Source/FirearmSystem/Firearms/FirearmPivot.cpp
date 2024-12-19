@@ -49,7 +49,8 @@ bool UFirearmPivot::Equip(class AFirearm* InFirearm) {
 
 void UFirearmPivot::AddImpulse(FVector Impulse, bool bRandomize) {
 	if (bRandomize) {
-		FVector RotationVector = ResistParams.RecoilRandomness * UKismetMathLibrary::RandomUnitVector();
+		float GaussianModifier = sqrt(-2 * log(FMath::FRand()));
+		FVector RotationVector = GaussianModifier * ResistParams.RecoilRandomness * UKismetMathLibrary::RandomUnitVector();
 		FQuat Rotation = FQuat::MakeFromRotationVector(RotationVector);
 		Impulse = Rotation * Impulse;
 	}

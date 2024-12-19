@@ -27,24 +27,43 @@ void AHittableActor::Tick(float DeltaTime)
 bool AHittableActor::HandleImpact(class ABullet* Bullet, FHitResult Hit) {
 	
 	float RelativeSpeed = Bullet->Velocity | Hit.ImpactNormal;
-	float VelocityRatio = (-RelativeSpeed / (MaxIncomingVelocity * 100));
-	float Probability = FMath::Lerp(RicochetShallowProbability, RicochetDeepProbability, VelocityRatio) ;
-	if (RicochetDeepProbability > 0 && FMath::FRand() < Probability && -RelativeSpeed < MaxIncomingVelocity * 100) {
-		if (RelativeSpeed < 0) {
-			FVector VelocityImpulse = Bullet->Velocity.ProjectOnToNormal(Hit.ImpactNormal);
-			Bullet->Velocity -= 2 * VelocityImpulse;
-		}
-		Bullet->Velocity -= Hit.ImpactNormal * RelativeSpeed * RicochetElasticity * Bullet->Elasticity;
-		float RandomAngle = FMath::Lerp(RicochetShallowRandomness, RicochetDeepRandomness, VelocityRatio * VelocityRatio);
-		FVector RotationVector = RandomAngle * UKismetMathLibrary::RandomUnitVector();
-		Bullet->Velocity = FQuat::MakeFromRotationVector(RotationVector) * Bullet->Velocity;
-		if ((Bullet->Velocity | Hit.ImpactNormal) > 0) {
-			OnHit(Bullet, Hit);
-			return true;
-		}
+	float Reflectance = GetReflectance(Bullet->Velocity.GetSafeNormal(), Hit.ImpactNormal);
+	bool bRicochet = FMath::FRand() < Reflectance;
+	if (bRicochet) 
+		return Ricochet(Bullet, Hit, RelativeSpeed, Reflectance);
+	else
+		return Penetrate(Bullet, Hit, RelativeSpeed);
+}
+
+bool AHittableActor::Ricochet(class ABullet* Bullet, FHitResult Hit, float IncomingSpeed, float Reflectance) {
+	if (IncomingSpeed < 0) {
+		float GaussianRadius = sqrt(-2*log(FMath::FRand()));
+		float StandardDeviation = FMath::Lerp(DeepRandomRicochetAngleStandardDeviation, ShallowRandomRicochetAngleStandardDeviation, Reflectance);
+		float RandomAngle = GaussianRadius * StandardDeviation;
+		FQuat Rotation = FQuat::MakeFromRotationVector(RandomAngle * UKismetMathLibrary::RandomUnitVector());
+		
+		FVector VelocityImpulse = IncomingSpeed * Hit.ImpactNormal;
+		Bullet->Velocity -= 2 * VelocityImpulse;
+		Bullet->Velocity = Rotation * Bullet->Velocity;
+		Bullet->Velocity *= RicochetElasticity * Bullet->Elasticity;
 	}
+	
+	OnHit(Bullet, Hit);
+	if ((Bullet->Velocity | Hit.ImpactNormal) > 0) return true;
+	else return false;
+}
+
+bool AHittableActor::Penetrate(class ABullet* Bullet, FHitResult Hit, float IncomingSpeed) {
 	OnHit(Bullet, Hit);
 	return false;
+}
+
+float AHittableActor::GetReflectance(FVector Incoming, FVector Normal) const {
+	float Dot = (-Incoming) | Normal;
+	float Angle = FMath::Acos(Dot);
+	float Exp = 1+FMath::Exp(-RicochetThresholdSharpness * (Angle - RicochetThreshold)); 
+	float Reflectance =  1/Exp;;
+	return Reflectance;
 }
 
 
