@@ -24,18 +24,17 @@ void AHittableActor::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 }
 
-bool AHittableActor::HandleImpact(class ABullet* Bullet, FHitResult Hit) {
+bool AHittableActor::HandleImpact(class ABullet* Bullet, FHitResult Hit, float DeltaSeconds) {
 	
 	float RelativeSpeed = Bullet->Velocity | Hit.ImpactNormal;
 	float Reflectance = GetReflectance(Bullet->Velocity.GetSafeNormal(), Hit.ImpactNormal);
-	bool bRicochet = FMath::FRand() < Reflectance;
-	if (bRicochet) 
-		return Ricochet(Bullet, Hit, RelativeSpeed, Reflectance);
+	if (FMath::FRand() < Reflectance) 
+		return Ricochet(Bullet, Hit, RelativeSpeed, Reflectance, DeltaSeconds);
 	else
-		return Penetrate(Bullet, Hit);
+		return Penetrate(Bullet, Hit, DeltaSeconds);
 }
 
-bool AHittableActor::Ricochet(class ABullet* Bullet, FHitResult Hit, float IncomingSpeed, float Reflectance) {
+bool AHittableActor::Ricochet(class ABullet* Bullet, FHitResult Hit, float IncomingSpeed, float Reflectance, float DeltaSeconds) {
 	if (IncomingSpeed < 0) {
 		float GaussianRadius = sqrt(-2*log(FMath::FRand()));
 		float StandardDeviation = FMath::Lerp(DeepRandomRicochetAngleStandardDeviation, ShallowRandomRicochetAngleStandardDeviation, Reflectance);
@@ -58,12 +57,36 @@ bool AHittableActor::Ricochet(class ABullet* Bullet, FHitResult Hit, float Incom
 		return true;
 	}
 	else 
-		return Penetrate(Bullet, Hit);
+		return Penetrate(Bullet, Hit, DeltaSeconds);
 }
 
-bool AHittableActor::Penetrate(class ABullet* Bullet, FHitResult Hit) {
-	OnPenetrate(Bullet, Hit.ImpactPoint, Hit.ImpactNormal);
-	return false;
+bool AHittableActor::Penetrate(class ABullet* Bullet, FHitResult Hit, float DeltaSeconds) {
+	if (!bPenetrate) {
+		OnDestroy(Bullet, Hit.ImpactPoint, Hit.ImpactNormal);
+		return false;
+	}
+	else if (!bPhysicalPenetrationParams) {
+		bool bSuccess = FMath::FRand() < PenetrationProbability;
+		if (!bSuccess)
+			OnDestroy(Bullet, Hit.ImpactPoint, Hit.ImpactNormal);
+		else
+			OnPenetrate(Bullet, Hit.ImpactPoint, Hit.ImpactNormal);
+		return bSuccess;
+	}
+	else {
+		float BulletDensity = Utility::GetDensityOf(Bullet->Material);
+		float SelfDensity = Utility::GetDensityOf(Material);
+		float DensityRatio = BulletDensity / SelfDensity;
+		float AveragePenetrationDepth = Bullet->BulletLength * DensityRatio;
+		float PenetrationDepth = sqrt(-2*log(FMath::FRand())) * AveragePenetrationDepth;
+		float Deceleration = Bullet->Velocity.SquaredLength() / (2 * PenetrationDepth);
+		// float MaxPenetrationTime = Bullet->Velocity.Length() / Deceleration;
+		// FVector ProjectedLocation = 0.5 * Bullet->Velocity * MaxPenetrationTime;
+		
+		Bullet->SetupPenetrationParams(this, Deceleration);
+		OnPenetrate(Bullet, Hit.ImpactPoint, Hit.ImpactNormal);
+		return true;
+	}
 }
 
 float AHittableActor::GetReflectance(FVector Incoming, FVector Normal) const {

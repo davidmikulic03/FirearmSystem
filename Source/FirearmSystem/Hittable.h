@@ -16,5 +16,5 @@ class FIREARMSYSTEM_API IHittable
 {
 	GENERATED_BODY()
 public:
-	virtual bool HandleImpact(class ABullet* Bullet, FHitResult Hit) = 0;
+	virtual bool HandleImpact(class ABullet* Bullet, FHitResult Hit, float DeltaSeconds) = 0;
 };

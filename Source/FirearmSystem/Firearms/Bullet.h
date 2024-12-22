@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
+#include "FirearmSystem/ImpactMaterial.h"
 #include "GameFramework/Actor.h"
 #include "Bullet.generated.h"
 
@@ -12,11 +13,16 @@ class FIREARMSYSTEM_API ABullet : public AActor
 public:
 	ABullet();
 
+	UFUNCTION(BlueprintImplementableEvent)
+		void OnInelasticCollision(FVector Location);
+	
 	virtual void Fire(class AFirearm* ShotFrom, FVector InVelocity);
 
-	virtual void Move(float DeltaSeconds, AActor* OriginIgnore);
+	virtual void Move(float& DeltaSeconds, AActor* OriginIgnore);
 
 	void EvaluateTrail(float DeltaSeconds);
+
+	void SetupPenetrationParams(class AHittableActor* InActor, float Deceleration);
 
 public:
 	virtual void Tick(float DeltaSeconds) override;
@@ -31,6 +37,11 @@ public:
 		float Elasticity = 0.5f;
 	UPROPERTY(EditDefaultsOnly, meta=(Units="s"))
 		float MaxLifetime = 0;
+	UPROPERTY(EditDefaultsOnly, meta=(Units="cm"))
+		float BulletLength = 1.f;
+	UPROPERTY(EditDefaultsOnly)
+		TEnumAsByte<EImpactMaterial> Material = EImpactMaterial::Lead;
+	
 	UPROPERTY(EditDefaultsOnly, meta=(Units="s"))
 		float TrailTime = 0.05f;
 	UPROPERTY(EditDefaultsOnly, meta=(UIMin=0, UIMax=10.f, EditCondition="TrailTime>0", EditConditionHides))
@@ -46,8 +57,12 @@ public:
 	UPROPERTY()
 		TArray<class USplineMeshComponent*> Trail;
 	
+	class AHittableActor* Penetrant = nullptr;
+	float DecelerationInMedium = 0.f;
 protected:
 	void HandleImpact(FHitResult Hit, float DeltaSeconds);
 
 	TArray<AActor*> IgnoreActors;
+
+	bool bIsMoving = true;
 };

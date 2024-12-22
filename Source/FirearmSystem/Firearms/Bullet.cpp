@@ -7,6 +7,7 @@
 #include "Components/SphereComponent.h"
 #include "Components/SplineMeshComponent.h"
 #include "FirearmSystem/Hittable.h"
+#include "FirearmSystem/HittableActor.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Runtime/MovieSceneTracks/Private/MovieSceneTracksCustomAccessors.h"
@@ -52,28 +53,68 @@ void ABullet::Fire(AFirearm* ShotFrom, FVector InVelocity) {
 	}
 }
 
-void ABullet::Move(float DeltaSeconds, AActor* OriginIgnore)
-{
+void ABullet::Move(float& DeltaSeconds, AActor* OriginIgnore) {
 	SetActorRotation(Velocity.Rotation(), ETeleportType::ResetPhysics);
 	FVector Acceleration = FVector::UpVector * GetWorld()->GetGravityZ();
 	FVector StartLocation = GetActorLocation();
+
+	auto NewIgnore = IgnoreActors;
+	if (OriginIgnore)
+		NewIgnore.Add(OriginIgnore);
+	
+	if (Penetrant) {
+		FVector ProjectedVelocity = Velocity - DeltaSeconds * Velocity.GetSafeNormal() * DecelerationInMedium;
+		if ((ProjectedVelocity | Velocity) < 0) ProjectedVelocity = FVector::ZeroVector;
+		float MaxPenetrationTime = Velocity.Length() / DecelerationInMedium;
+		FVector ProjectedLocation = GetActorLocation() + (ProjectedVelocity + Velocity / 2) * FMath::Min(MaxPenetrationTime, DeltaSeconds);
+
+		FHitResult BackTraceHit;
+		bool bBackTrace = UKismetSystemLibrary::SphereTraceSingle(
+		GetWorld(),
+		ProjectedLocation,
+		StartLocation,
+		Collision->GetUnscaledSphereRadius(),
+		UEngineTypes::ConvertToTraceType(ECC_GameTraceChannel1),
+		false, NewIgnore, EDrawDebugTrace::None, BackTraceHit,
+		true, FLinearColor::Green, FLinearColor::Red,
+		0.1f);
+		
+		if (bBackTrace) {
+			float Distance = FVector::Distance(BackTraceHit.Location, StartLocation);
+			float ProjectedDistance = FVector::Distance(StartLocation, ProjectedLocation);
+			float Ratio = Distance / ProjectedDistance;
+			float SqrtRatio = sqrt(Ratio);
+			float TimePassed = SqrtRatio * DeltaSeconds;
+			DeltaSeconds = DeltaSeconds - TimePassed;
+			SetActorLocation(BackTraceHit.Location);
+			auto temp = Penetrant;
+			Penetrant = nullptr;
+			Velocity -= Velocity.GetSafeNormal() * DecelerationInMedium * TimePassed;
+			Move(DeltaSeconds, temp);
+			return;
+		} else {
+			SetActorLocation(ProjectedLocation);
+			Velocity = ProjectedVelocity;
+			if (Velocity.SquaredLength() < 1.f) {
+				OnInelasticCollision(ProjectedLocation);
+				bIsMoving = false;
+			}
+		}
+	}
+	
 	FVector NewLocation = GetActorLocation() + Velocity * DeltaSeconds + 0.5 * Acceleration * DeltaSeconds * DeltaSeconds;
 	FHitResult Hit;
 
-	auto NewIgnore = IgnoreActors;
-	NewIgnore.Add(OriginIgnore);
-
-	bool bHit = UKismetSystemLibrary::SphereTraceSingle(
+	bool bHit = UKismetSystemLibrary::LineTraceSingle(
 		GetWorld(),
 		StartLocation,
 		NewLocation,
-		Collision->GetUnscaledSphereRadius(),
 		UEngineTypes::ConvertToTraceType(ECC_GameTraceChannel1),
 		false, NewIgnore, EDrawDebugTrace::None, Hit,
 		true, FLinearColor::Green, FLinearColor::Red,
 		0.1f);
 	
-	SetActorLocation(bHit ? Hit.Location : NewLocation);
+	SetActorLocation(bHit ? Hit.Location + Collision->GetUnscaledSphereRadius() * Hit.Normal : NewLocation);
 
 	// FTransform ComponentSpaceTransform = TestTrail->GetComponentTransform().Inverse();
 	// TestTrail->SetStartPosition(ComponentSpaceTransform.TransformPosition(StartLocation));
@@ -82,7 +123,8 @@ void ABullet::Move(float DeltaSeconds, AActor* OriginIgnore)
 	// TestTrail->SetEndTangent(ComponentSpaceTransform.TransformVector(0.25f * Velocity));
 	
 	if(bHit) {
-		float NewDeltaSeconds = DeltaSeconds * FVector::Distance(GetActorLocation(), NewLocation) / Velocity.Length();
+		float Ratio = FVector::Distance(StartLocation, GetActorLocation()) / FVector::Distance(StartLocation, NewLocation);
+		float NewDeltaSeconds = DeltaSeconds * Ratio;
 		HandleImpact(Hit, NewDeltaSeconds);
 	}
 	
@@ -129,8 +171,14 @@ void ABullet::EvaluateTrail(float DeltaSeconds)
 	// }
 }
 
+void ABullet::SetupPenetrationParams(class AHittableActor* InActor, float Deceleration) {
+	Penetrant = InActor;
+	DecelerationInMedium = Deceleration;
+}
+
 void ABullet::Tick(float DeltaSeconds) {
-	Move(DeltaSeconds, nullptr);
+	if (bIsMoving)
+		Move(DeltaSeconds, nullptr);
 	// EvaluateTrail(DeltaSeconds);
 	if (MaxLifetime<=0)
 		return;
@@ -141,12 +189,12 @@ void ABullet::Tick(float DeltaSeconds) {
 
 void ABullet::HandleImpact(FHitResult Hit, float DeltaSeconds) {
 	if (auto a = Cast<IHittable>(Hit.GetActor())) {
-		if (a->HandleImpact(this, Hit))
+		if (a->HandleImpact(this, Hit, DeltaSeconds)) {
 			Move(DeltaSeconds, Hit.GetActor());
-		else Destroy();
+			return;
+		}
 	}
-	else
-		Destroy();
+	Destroy();
 	// Velocity = 0.2 * FMath::GetReflectionVector(Velocity, Hit.ImpactNormal);
 	// SetActorLocation(Hit.Location);
 	// if(auto f = Cast<AFirearmBase>(GetOwner()))
