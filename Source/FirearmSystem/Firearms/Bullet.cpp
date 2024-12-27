@@ -53,7 +53,9 @@ void ABullet::Fire(AFirearm* ShotFrom, FVector InVelocity) {
 	}
 }
 
-void ABullet::Move(float& DeltaSeconds, AActor* OriginIgnore) {
+void ABullet::Move(float& DeltaSeconds, AActor*& OriginIgnore) {
+	if (DeltaSeconds <=0)
+		return;
 	SetActorRotation(Velocity.Rotation(), ETeleportType::ResetPhysics);
 	FVector Acceleration = FVector::UpVector * GetWorld()->GetGravityZ();
 	FVector StartLocation = GetActorLocation();
@@ -63,72 +65,82 @@ void ABullet::Move(float& DeltaSeconds, AActor* OriginIgnore) {
 		NewIgnore.Add(OriginIgnore);
 	
 	if (Penetrant) {
-		FVector ProjectedVelocity = Velocity - DeltaSeconds * Velocity.GetSafeNormal() * DecelerationInMedium;
-		if ((ProjectedVelocity | Velocity) < 0) ProjectedVelocity = FVector::ZeroVector;
-		float MaxPenetrationTime = Velocity.Length() / DecelerationInMedium;
-		FVector ProjectedLocation = GetActorLocation() + (ProjectedVelocity + Velocity / 2) * FMath::Min(MaxPenetrationTime, DeltaSeconds);
 
-		FHitResult BackTraceHit;
-		bool bBackTrace = UKismetSystemLibrary::SphereTraceSingle(
+		float BulletDensity = Utility::GetDensityOf(Material);
+		float SelfDensity = Utility::GetDensityOf(Penetrant->Material);
+		float DensityRatio = BulletDensity / SelfDensity;
+		float AveragePenetrationDepth = BulletLength * DensityRatio;
+		float PenetrationDepth = sqrt(-2*log(FMath::FRand())) * AveragePenetrationDepth;
+		float Deceleration = Velocity.SquaredLength() / (2 * PenetrationDepth);
+		
+		float Speed = Velocity.Size();
+		float MaxPenetrationTime = Speed / Deceleration;
+		float MinDtPen = FMath::Min(MaxPenetrationTime, DeltaSeconds);
+		FVector ProjectedVelocity = Velocity.GetClampedToMaxSize(Speed - MinDtPen * Deceleration);
+		FVector ProjectedLocation = GetActorLocation() + Velocity * MinDtPen - 0.5 * Deceleration * (Velocity / Speed) * MinDtPen * MinDtPen;
+
+		TArray<FHitResult> BackTraceHits;
+		bool bBackTrace = UKismetSystemLibrary::LineTraceMulti(
 		GetWorld(),
 		ProjectedLocation,
 		StartLocation,
-		Collision->GetUnscaledSphereRadius(),
 		UEngineTypes::ConvertToTraceType(ECC_GameTraceChannel1),
-		false, NewIgnore, EDrawDebugTrace::None, BackTraceHit,
+		false, NewIgnore, EDrawDebugTrace::None, BackTraceHits,
 		true, FLinearColor::Green, FLinearColor::Red,
 		0.1f);
-		
-		if (bBackTrace) {
-			float Distance = FVector::Distance(BackTraceHit.Location, StartLocation);
+
+		FHitResult* Hit = bBackTrace ? BackTraceHits.FindByPredicate([this](FHitResult h) {
+				return h.GetActor() == Penetrant;
+			}) : nullptr;
+		if (Hit) {
+			float Distance = FVector::Distance(StartLocation, Hit->Location);
 			float ProjectedDistance = FVector::Distance(StartLocation, ProjectedLocation);
 			float Ratio = Distance / ProjectedDistance;
 			float SqrtRatio = sqrt(Ratio);
 			float TimePassed = SqrtRatio * DeltaSeconds;
 			DeltaSeconds = DeltaSeconds - TimePassed;
-			SetActorLocation(BackTraceHit.Location);
-			auto temp = Penetrant;
+			SetActorLocation(Hit->Location);
+			OriginIgnore = Penetrant;
 			Penetrant = nullptr;
 			Velocity -= Velocity.GetSafeNormal() * DecelerationInMedium * TimePassed;
-			Move(DeltaSeconds, temp);
-			return;
 		} else {
 			SetActorLocation(ProjectedLocation);
 			Velocity = ProjectedVelocity;
-			if (Velocity.SquaredLength() < 1.f) {
+			DeltaSeconds = MinDtPen < DeltaSeconds ? 0 : FMath::Min(DeltaSeconds, MinDtPen - DeltaSeconds);
+			if (DeltaSeconds <= 0) {
 				OnInelasticCollision(ProjectedLocation);
 				bIsMoving = false;
 			}
 		}
 	}
-	
-	FVector NewLocation = GetActorLocation() + Velocity * DeltaSeconds + 0.5 * Acceleration * DeltaSeconds * DeltaSeconds;
-	FHitResult Hit;
+	else {
+		FVector NewLocation = GetActorLocation() + Velocity * DeltaSeconds + 0.5 * Acceleration * DeltaSeconds * DeltaSeconds;
+		FHitResult Hit;
 
-	bool bHit = UKismetSystemLibrary::LineTraceSingle(
-		GetWorld(),
-		StartLocation,
-		NewLocation,
-		UEngineTypes::ConvertToTraceType(ECC_GameTraceChannel1),
-		false, NewIgnore, EDrawDebugTrace::None, Hit,
-		true, FLinearColor::Green, FLinearColor::Red,
-		0.1f);
+		bool bHit = UKismetSystemLibrary::LineTraceSingle(
+			GetWorld(),
+			StartLocation,
+			NewLocation,
+			UEngineTypes::ConvertToTraceType(ECC_GameTraceChannel1),
+			false, NewIgnore, EDrawDebugTrace::None, Hit,
+			true, FLinearColor::Green, FLinearColor::Red,
+			0.1f);
+		if (bHit && Hit.Distance==0) {
+			OnInelasticCollision(Hit.Location);
+			bIsMoving = false;
+		}
 	
-	SetActorLocation(bHit ? Hit.Location + Collision->GetUnscaledSphereRadius() * Hit.Normal : NewLocation);
-
-	// FTransform ComponentSpaceTransform = TestTrail->GetComponentTransform().Inverse();
-	// TestTrail->SetStartPosition(ComponentSpaceTransform.TransformPosition(StartLocation));
-	// TestTrail->SetEndPosition(ComponentSpaceTransform.TransformPosition(GetActorLocation()));
-	// TestTrail->SetStartTangent(ComponentSpaceTransform.TransformVector(0.25f * Velocity));
-	// TestTrail->SetEndTangent(ComponentSpaceTransform.TransformVector(0.25f * Velocity));
+		SetActorLocation(bHit ? Hit.Location + Collision->GetUnscaledSphereRadius() * Hit.Normal : NewLocation);
 	
-	if(bHit) {
-		float Ratio = FVector::Distance(StartLocation, GetActorLocation()) / FVector::Distance(StartLocation, NewLocation);
-		float NewDeltaSeconds = DeltaSeconds * Ratio;
-		HandleImpact(Hit, NewDeltaSeconds);
+		if(bHit) {
+			float Ratio = FVector::Distance(StartLocation, GetActorLocation()) / FVector::Distance(StartLocation, NewLocation);
+			DeltaSeconds *= Ratio;
+			HandleImpact(Hit, DeltaSeconds);
+		}
+		else DeltaSeconds = 0;
+	
+		Velocity += Acceleration * DeltaSeconds;
 	}
-	
-	Velocity += Acceleration * DeltaSeconds;
 }
 
 void ABullet::EvaluateTrail(float DeltaSeconds)
@@ -173,26 +185,22 @@ void ABullet::EvaluateTrail(float DeltaSeconds)
 
 void ABullet::SetupPenetrationParams(class AHittableActor* InActor, float Deceleration) {
 	Penetrant = InActor;
-	DecelerationInMedium = Deceleration;
 }
 
 void ABullet::Tick(float DeltaSeconds) {
-	if (bIsMoving)
-		Move(DeltaSeconds, nullptr);
-	// EvaluateTrail(DeltaSeconds);
-	if (MaxLifetime<=0)
-		return;
-	if(LifetimeCounter < MaxLifetime)
+	if(MaxLifetime!=0 && LifetimeCounter < MaxLifetime)
 		LifetimeCounter+=DeltaSeconds;
-	else Destroy();
+	else if (MaxLifetime!=0) Destroy();
+
+	AActor* Ignore = nullptr;
+	while (bIsMoving && DeltaSeconds>0)
+		Move(DeltaSeconds, Ignore);
 }
 
 void ABullet::HandleImpact(FHitResult Hit, float DeltaSeconds) {
 	if (auto a = Cast<IHittable>(Hit.GetActor())) {
-		if (a->HandleImpact(this, Hit, DeltaSeconds)) {
-			Move(DeltaSeconds, Hit.GetActor());
+		if (a->HandleImpact(this, Hit, DeltaSeconds))
 			return;
-		}
 	}
 	Destroy();
 	// Velocity = 0.2 * FMath::GetReflectionVector(Velocity, Hit.ImpactNormal);

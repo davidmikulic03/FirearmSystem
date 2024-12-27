@@ -74,16 +74,16 @@ bool AHittableActor::Penetrate(class ABullet* Bullet, FHitResult Hit, float Delt
 		return bSuccess;
 	}
 	else {
-		float BulletDensity = Utility::GetDensityOf(Bullet->Material);
-		float SelfDensity = Utility::GetDensityOf(Material);
-		float DensityRatio = BulletDensity / SelfDensity;
-		float AveragePenetrationDepth = Bullet->BulletLength * DensityRatio;
-		float PenetrationDepth = sqrt(-2*log(FMath::FRand())) * AveragePenetrationDepth;
-		float Deceleration = Bullet->Velocity.SquaredLength() / (2 * PenetrationDepth);
+		// float BulletDensity = Utility::GetDensityOf(Bullet->Material);
+		// float SelfDensity = Utility::GetDensityOf(Material);
+		// float DensityRatio = BulletDensity / SelfDensity;
+		// float AveragePenetrationDepth = Bullet->BulletLength * DensityRatio;
+		// float PenetrationDepth = sqrt(-2*log(FMath::FRand())) * AveragePenetrationDepth;
+		// float Deceleration = Bullet->Velocity.SquaredLength() / (2 * PenetrationDepth);
 		// float MaxPenetrationTime = Bullet->Velocity.Length() / Deceleration;
 		// FVector ProjectedLocation = 0.5 * Bullet->Velocity * MaxPenetrationTime;
 		
-		Bullet->SetupPenetrationParams(this, Deceleration);
+		Bullet->SetupPenetrationParams(this, 0);
 		OnPenetrate(Bullet, Hit.ImpactPoint, Hit.ImpactNormal);
 		return true;
 	}
