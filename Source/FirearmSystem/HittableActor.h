@@ -50,9 +50,13 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Impact Response|Penetration", meta = (EditCondition="bPenetrate", EditConditionHides))
 		bool bPhysicalPenetrationParams = true;
 	UPROPERTY(EditAnywhere, Category = "Impact Response|Penetration", meta = (UIMin=0.f, UIMax=1.f, EditCondition="bPhysicalPenetrationParams", EditConditionHides))
+		bool bUseMaterials = true;
+	UPROPERTY(EditAnywhere, Category = "Impact Response|Penetration", meta = (UIMin=0.f, UIMax=1.f, EditCondition="bPhysicalPenetrationParams", EditConditionHides))
 		float PenetrationDepthRandomness = 0.f;
-	UPROPERTY(EditAnywhere, Category = "Impact Response|Penetration", meta = (EditCondition="bPhysicalPenetrationParams", EditConditionHides))
+	UPROPERTY(EditAnywhere, Category = "Impact Response|Penetration", meta = (EditCondition="bUseMaterials", EditConditionHides))
 		TEnumAsByte<EImpactMaterial> Material = Steel;
+	UPROPERTY(EditAnywhere, Category = "Impact Response|Penetration", meta = (EditCondition="!bUseMaterials", EditConditionHides))
+		float Density = 0.5f;
 	UPROPERTY(EditAnywhere, Category = "Impact Response|Penetration", meta = (UIMin=0.f, UIMax=1.f, EditCondition="bPenetrate", EditConditionHides))
 		float PenetrationProbability = 1.f;
 

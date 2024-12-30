@@ -65,6 +65,8 @@ void UFirearmPivot::AddImpulse(FVector Impulse, bool bRandomize) {
 }
 
 void UFirearmPivot::UpdateState(float DeltaSeconds) {
+	if (!Firearm)
+		return;
 	
 	FTransform ToWorld = GetComponentTransform();
 	FQuat DeltaRotation = FQuat::MakeFromRotationVector(ToWorld.TransformVectorNoScale(AngularVelocity * DeltaSeconds));

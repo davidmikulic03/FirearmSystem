@@ -67,16 +67,18 @@ void ABullet::Move(float& DeltaSeconds, AActor*& OriginIgnore) {
 	if (Penetrant) {
 
 		float BulletDensity = Utility::GetDensityOf(Material);
-		float SelfDensity = Utility::GetDensityOf(Penetrant->Material);
+		float SelfDensity = Penetrant->bUseMaterials ? Utility::GetDensityOf(Penetrant->Material) : Penetrant->Density;
 		float DensityRatio = BulletDensity / SelfDensity;
 		float AveragePenetrationDepth = BulletLength * DensityRatio;
-		float PenetrationDepth = sqrt(-2*log(FMath::FRand())) * AveragePenetrationDepth;
-		float Deceleration = Velocity.SquaredLength() / (2 * PenetrationDepth);
+		float Rand = Penetrant->PenetrationDepthRandomness * (sqrt(-2*log(FMath::FRand())) * AveragePenetrationDepth - AveragePenetrationDepth / 2);
+		float PenetrationDepth = AveragePenetrationDepth + Rand;
+		float Deceleration = (40000*40000) / (2 * PenetrationDepth);
 		
 		float Speed = Velocity.Size();
 		float MaxPenetrationTime = Speed / Deceleration;
 		float MinDtPen = FMath::Min(MaxPenetrationTime, DeltaSeconds);
 		FVector ProjectedVelocity = Velocity.GetClampedToMaxSize(Speed - MinDtPen * Deceleration);
+		if ((ProjectedVelocity | Velocity) < 0) ProjectedVelocity = FVector::ZeroVector;
 		FVector ProjectedLocation = GetActorLocation() + Velocity * MinDtPen - 0.5 * Deceleration * (Velocity / Speed) * MinDtPen * MinDtPen;
 
 		TArray<FHitResult> BackTraceHits;
@@ -85,17 +87,16 @@ void ABullet::Move(float& DeltaSeconds, AActor*& OriginIgnore) {
 		ProjectedLocation,
 		StartLocation,
 		UEngineTypes::ConvertToTraceType(ECC_GameTraceChannel1),
-		false, NewIgnore, EDrawDebugTrace::None, BackTraceHits,
+		true, NewIgnore, EDrawDebugTrace::None, BackTraceHits,
 		true, FLinearColor::Green, FLinearColor::Red,
 		0.1f);
 
 		FHitResult* Hit = bBackTrace ? BackTraceHits.FindByPredicate([this](FHitResult h) {
 				return h.GetActor() == Penetrant;
 			}) : nullptr;
-		if (Hit) {
-			float Distance = FVector::Distance(StartLocation, Hit->Location);
+		if (Hit && Hit->Distance > 0) {
 			float ProjectedDistance = FVector::Distance(StartLocation, ProjectedLocation);
-			float Ratio = Distance / ProjectedDistance;
+			float Ratio = Hit->Distance / ProjectedDistance;
 			float SqrtRatio = sqrt(Ratio);
 			float TimePassed = SqrtRatio * DeltaSeconds;
 			DeltaSeconds = DeltaSeconds - TimePassed;
@@ -106,8 +107,8 @@ void ABullet::Move(float& DeltaSeconds, AActor*& OriginIgnore) {
 		} else {
 			SetActorLocation(ProjectedLocation);
 			Velocity = ProjectedVelocity;
-			DeltaSeconds = MinDtPen < DeltaSeconds ? 0 : FMath::Min(DeltaSeconds, MinDtPen - DeltaSeconds);
-			if (DeltaSeconds <= 0) {
+			DeltaSeconds = DeltaSeconds - MinDtPen;
+			if (Velocity.SquaredLength() < 1.f) {
 				OnInelasticCollision(ProjectedLocation);
 				bIsMoving = false;
 			}
@@ -125,10 +126,10 @@ void ABullet::Move(float& DeltaSeconds, AActor*& OriginIgnore) {
 			false, NewIgnore, EDrawDebugTrace::None, Hit,
 			true, FLinearColor::Green, FLinearColor::Red,
 			0.1f);
-		if (bHit && Hit.Distance==0) {
-			OnInelasticCollision(Hit.Location);
-			bIsMoving = false;
-		}
+		// if (bHit && Hit.Distance>0) {
+		// 	OnInelasticCollision(Hit.Location);
+		// 	bIsMoving = false;
+		// }
 	
 		SetActorLocation(bHit ? Hit.Location + Collision->GetUnscaledSphereRadius() * Hit.Normal : NewLocation);
 	
