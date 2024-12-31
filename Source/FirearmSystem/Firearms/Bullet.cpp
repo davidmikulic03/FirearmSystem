@@ -58,6 +58,7 @@ void ABullet::Move(float& DeltaSeconds, AActor*& OriginIgnore) {
 		return;
 	SetActorRotation(Velocity.Rotation(), ETeleportType::ResetPhysics);
 	FVector Acceleration = FVector::UpVector * GetWorld()->GetGravityZ();
+	Velocity += Acceleration * DeltaSeconds;
 	FVector StartLocation = GetActorLocation();
 
 	auto NewIgnore = IgnoreActors;
@@ -139,8 +140,6 @@ void ABullet::Move(float& DeltaSeconds, AActor*& OriginIgnore) {
 			HandleImpact(Hit, DeltaSeconds);
 		}
 		else DeltaSeconds = 0;
-	
-		Velocity += Acceleration * DeltaSeconds;
 	}
 }
 
