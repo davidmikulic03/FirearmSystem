@@ -24,33 +24,52 @@ ABullet::ABullet() {
 	PrimaryActorTick.bCanEverTick = true;
 }
 
+
+void ABullet::Tick(float DeltaSeconds) {
+	if(MaxLifetime!=0 && LifetimeCounter < MaxLifetime)
+		LifetimeCounter+=DeltaSeconds;
+	else if (MaxLifetime!=0) Destroy();
+
+	AActor* Ignore = nullptr;
+	while (bIsMoving && DeltaSeconds>0)
+		Move(DeltaSeconds, Ignore);
+	PruneTrail();
+
+	for (int i = 0; i < PastPositions.Num()-1; ++i) {
+		DrawDebugLine(GetWorld(), PastPositions[i].Position, PastPositions[i+1].Position, FColor::Yellow);
+	}
+}
+
 void ABullet::Fire(AFirearm* ShotFrom, FVector InVelocity) {
 	SetOwner(ShotFrom);
 	Velocity = 100 * InVelocity;
+	TimeOfFire = GetWorld()->TimeSeconds;
+	RegisterPosition();
+	
 	if(GetOwner()) {
 		GetOwner()->GetAttachedActors(IgnoreActors);
 		IgnoreActors.Add(GetOwner()->GetAttachParentActor());
 		IgnoreActors.Add(GetOwner());
 		IgnoreActors.Add(this);
 	}
-	if (TrailTime>0) {
-		
-		Trail.Reserve(MaxTrailMeshes);
-		for (int i = 0; i < MaxTrailMeshes; ++i) {
-		
-			if (auto m = Cast<USplineMeshComponent>(AddComponentByClass(
-			USplineMeshComponent::StaticClass(),
-			true,
-			GetTransform(),
-			false))) {
-				m->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-				m->SetVisibility(false);
-				m->SetMobility(EComponentMobility::Movable);
-				m->SetStaticMesh(TrailMesh);
-				Trail.Add(m);
-			}
-		}
-	}
+	// if (TrailTime>0) {
+	// 	
+	// 	Trail.Reserve(MaxTrailMeshes);
+	// 	for (int i = 0; i < MaxTrailMeshes; ++i) {
+	// 	
+	// 		if (auto m = Cast<USplineMeshComponent>(AddComponentByClass(
+	// 		USplineMeshComponent::StaticClass(),
+	// 		true,
+	// 		GetTransform(),
+	// 		false))) {
+	// 			m->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	// 			m->SetVisibility(false);
+	// 			m->SetMobility(EComponentMobility::Movable);
+	// 			m->SetStaticMesh(TrailMesh);
+	// 			Trail.Add(m);
+	// 		}
+	// 	}
+	// }
 }
 
 void ABullet::Move(float& DeltaSeconds, AActor*& OriginIgnore) {
@@ -102,11 +121,13 @@ void ABullet::Move(float& DeltaSeconds, AActor*& OriginIgnore) {
 			float TimePassed = SqrtRatio * DeltaSeconds;
 			DeltaSeconds = DeltaSeconds - TimePassed;
 			SetActorLocation(Hit->Location);
+			RegisterPosition();
 			OriginIgnore = Penetrant;
 			Penetrant = nullptr;
 			Velocity -= Velocity.GetSafeNormal() * DecelerationInMedium * TimePassed;
 		} else {
 			SetActorLocation(ProjectedLocation);
+			RegisterPosition();
 			Velocity = ProjectedVelocity;
 			DeltaSeconds = DeltaSeconds - MinDtPen;
 			if (Velocity.SquaredLength() < 1.f) {
@@ -133,6 +154,7 @@ void ABullet::Move(float& DeltaSeconds, AActor*& OriginIgnore) {
 		// }
 	
 		SetActorLocation(bHit ? Hit.Location + Collision->GetUnscaledSphereRadius() * Hit.Normal : NewLocation);
+		RegisterPosition();
 	
 		if(bHit) {
 			float Ratio = FVector::Distance(StartLocation, GetActorLocation()) / FVector::Distance(StartLocation, NewLocation);
@@ -187,16 +209,6 @@ void ABullet::SetupPenetrationParams(class AHittableActor* InActor, float Decele
 	Penetrant = InActor;
 }
 
-void ABullet::Tick(float DeltaSeconds) {
-	if(MaxLifetime!=0 && LifetimeCounter < MaxLifetime)
-		LifetimeCounter+=DeltaSeconds;
-	else if (MaxLifetime!=0) Destroy();
-
-	AActor* Ignore = nullptr;
-	while (bIsMoving && DeltaSeconds>0)
-		Move(DeltaSeconds, Ignore);
-}
-
 void ABullet::HandleImpact(FHitResult Hit, float DeltaSeconds) {
 	if (auto a = Cast<IHittable>(Hit.GetActor())) {
 		if (a->HandleImpact(this, Hit, DeltaSeconds))
@@ -208,5 +220,30 @@ void ABullet::HandleImpact(FHitResult Hit, float DeltaSeconds) {
 	// if(auto f = Cast<AFirearmBase>(GetOwner()))
 	// 	f->RegisterHit(Hit);
 	// else Destroy();
+}
+
+void ABullet::RegisterPosition() {
+	PastPositions.Add(FTrailEntry(GetActorLocation(), GetWorld()->TimeSeconds));
+}
+
+void ABullet::PruneTrail() {
+	
+	bool bPrune = false;
+	for (int i = PastPositions.Num()-2; i>=0; --i) {
+		if (bPrune) {
+			PastPositions.RemoveAt(i);
+			continue;
+		}
+		
+		double CurrentTimeDiff = GetWorld()->TimeSeconds - PastPositions[i].Time;
+		float Ratio = CurrentTimeDiff/(TrailTime);
+		if (Ratio > 1.f) {
+			FVector Offset = PastPositions[i+1].Position - PastPositions[i].Position;
+			PastPositions[i].Position = PastPositions[i].Position + Offset/Ratio;
+			PastPositions[i].Time = PastPositions[i].Time - CurrentTimeDiff/Ratio;
+			
+			bPrune = true;
+		}
+	}
 }
 

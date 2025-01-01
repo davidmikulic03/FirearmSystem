@@ -5,6 +5,15 @@
 #include "GameFramework/Actor.h"
 #include "Bullet.generated.h"
 
+USTRUCT()
+struct FTrailEntry {
+	GENERATED_BODY()
+	FTrailEntry() { }
+	FTrailEntry(FVector Position, double Time) : Position(Position), Time(Time) { }
+	FVector Position = FVector::ZeroVector;
+	double Time = 0.f;
+};
+
 UCLASS()
 class FIREARMSYSTEM_API ABullet : public AActor
 {
@@ -62,7 +71,13 @@ public:
 protected:
 	void HandleImpact(FHitResult Hit, float DeltaSeconds);
 
+	void RegisterPosition();
+	void PruneTrail();
+
 	TArray<AActor*> IgnoreActors;
+	
+	TArray<FTrailEntry> PastPositions;
+	double TimeOfFire = 0.0;
 
 	bool bIsMoving = true;
 };
