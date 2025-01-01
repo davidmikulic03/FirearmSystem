@@ -9,6 +9,7 @@
 #include "FirearmSystem/Hittable.h"
 #include "FirearmSystem/HittableActor.h"
 #include "GameFramework/ProjectileMovementComponent.h"
+#include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Runtime/MovieSceneTracks/Private/MovieSceneTracksCustomAccessors.h"
 
@@ -236,7 +237,7 @@ void ABullet::PruneTrail() {
 		}
 		
 		double CurrentTimeDiff = GetWorld()->TimeSeconds - PastPositions[i].Time;
-		float Ratio = CurrentTimeDiff/(TrailTime);
+		float Ratio = CurrentTimeDiff/TrailTime;
 		if (Ratio > 1.f) {
 			FVector Offset = PastPositions[i+1].Position - PastPositions[i].Position;
 			PastPositions[i].Position = PastPositions[i].Position + Offset/Ratio;
