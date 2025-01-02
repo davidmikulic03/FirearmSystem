@@ -216,11 +216,6 @@ void ABullet::HandleImpact(FHitResult Hit, float DeltaSeconds) {
 			return;
 	}
 	Destroy();
-	// Velocity = 0.2 * FMath::GetReflectionVector(Velocity, Hit.ImpactNormal);
-	// SetActorLocation(Hit.Location);
-	// if(auto f = Cast<AFirearmBase>(GetOwner()))
-	// 	f->RegisterHit(Hit);
-	// else Destroy();
 }
 
 void ABullet::RegisterPosition() {
