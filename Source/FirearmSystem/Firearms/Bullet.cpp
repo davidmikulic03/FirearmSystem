@@ -32,8 +32,11 @@ void ABullet::Tick(float DeltaSeconds) {
 	else if (MaxLifetime!=0) Destroy();
 
 	AActor* Ignore = nullptr;
-	while (bIsMoving && DeltaSeconds>0)
-		Move(DeltaSeconds, Ignore);
+	
+	while (DeltaSeconds>0)
+		Move(DeltaSeconds);
+
+	
 	PruneTrail();
 
 	for (int i = 0; i < PastPositions.Num()-1; ++i) {
@@ -73,17 +76,13 @@ void ABullet::Fire(AFirearm* ShotFrom, FVector InVelocity) {
 	// }
 }
 
-void ABullet::Move(float& DeltaSeconds, AActor*& OriginIgnore) {
+void ABullet::Move(float& DeltaSeconds) {
 	if (DeltaSeconds <=0)
 		return;
 	SetActorRotation(Velocity.Rotation(), ETeleportType::ResetPhysics);
 	FVector Acceleration = FVector::UpVector * GetWorld()->GetGravityZ();
 	Velocity += Acceleration * DeltaSeconds;
 	FVector StartLocation = GetActorLocation();
-
-	auto NewIgnore = IgnoreActors;
-	if (OriginIgnore)
-		NewIgnore.Add(OriginIgnore);
 	
 	if (Penetrant) {
 
@@ -108,7 +107,7 @@ void ABullet::Move(float& DeltaSeconds, AActor*& OriginIgnore) {
 		ProjectedLocation,
 		StartLocation,
 		UEngineTypes::ConvertToTraceType(ECC_GameTraceChannel1),
-		true, NewIgnore, EDrawDebugTrace::None, BackTraceHits,
+		true, IgnoreActors, EDrawDebugTrace::None, BackTraceHits,
 		true, FLinearColor::Green, FLinearColor::Red,
 		0.1f);
 
@@ -123,7 +122,6 @@ void ABullet::Move(float& DeltaSeconds, AActor*& OriginIgnore) {
 			DeltaSeconds = DeltaSeconds - TimePassed;
 			SetActorLocation(Hit->Location);
 			RegisterPosition();
-			OriginIgnore = Penetrant;
 			Penetrant = nullptr;
 			Velocity -= Velocity.GetSafeNormal() * DecelerationInMedium * TimePassed;
 		} else {
@@ -146,7 +144,7 @@ void ABullet::Move(float& DeltaSeconds, AActor*& OriginIgnore) {
 			StartLocation,
 			NewLocation,
 			UEngineTypes::ConvertToTraceType(ECC_GameTraceChannel1),
-			false, NewIgnore, EDrawDebugTrace::None, Hit,
+			false, IgnoreActors, EDrawDebugTrace::None, Hit,
 			true, FLinearColor::Green, FLinearColor::Red,
 			0.1f);
 		// if (bHit && Hit.Distance>0) {

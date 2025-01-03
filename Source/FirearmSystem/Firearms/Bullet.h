@@ -27,7 +27,7 @@ public:
 	
 	virtual void Fire(class AFirearm* ShotFrom, FVector InVelocity);
 
-	virtual void Move(float& DeltaSeconds, AActor*& OriginIgnore);
+	virtual void Move(float& DeltaSeconds);
 
 	void EvaluateTrail(float DeltaSeconds);
 
