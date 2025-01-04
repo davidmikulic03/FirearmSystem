@@ -33,7 +33,7 @@ void ABullet::Tick(float DeltaSeconds) {
 
 	AActor* Ignore = nullptr;
 	
-	while (DeltaSeconds>0)
+	while (bIsMoving && DeltaSeconds>0)
 		Move(DeltaSeconds);
 
 	

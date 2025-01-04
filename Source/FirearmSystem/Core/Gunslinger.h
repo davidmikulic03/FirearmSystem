@@ -39,16 +39,16 @@ public:
 	UFUNCTION()
 	void Pan(const FInputActionValue& Value);
 
-	UFUNCTION()
+	UFUNCTION(BlueprintCallable)
 	void StartCrouch(const FInputActionValue& Value);
-	UFUNCTION()
+	UFUNCTION(BlueprintCallable)
 	void StopCrouch(const FInputActionValue& Value);
 	
-	UFUNCTION()
+	UFUNCTION(BlueprintCallable)
 	void SingleFire(const FInputActionValue& Value);
-	UFUNCTION()
+	UFUNCTION(BlueprintCallable)
 	void StartFiring(const FInputActionValue& Value);
-	UFUNCTION()
+	UFUNCTION(BlueprintCallable)
 	void StopFiring(const FInputActionValue& Value);
 	bool bIsFiring = false;
 protected:
